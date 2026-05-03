@@ -18,7 +18,7 @@ const els = {
   status: document.querySelector("#status"),
 };
 
-const stateStorageKey = "math-print-state";
+const stateStorageKey = "math-print-grade1-state";
 const problemCountMin = 1;
 const problemCountMax = 60;
 let statusTimer;

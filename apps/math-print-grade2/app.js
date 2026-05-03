@@ -1,0 +1,438 @@
+const els = {
+  studentName: document.querySelector("#studentName"),
+  worksheetDate: document.querySelector("#worksheetDate"),
+  worksheetTitle: document.querySelector("#worksheetTitle"),
+  problemType: document.querySelector("#problemType"),
+  layoutMode: document.querySelector("#layoutMode"),
+  problemCount: document.querySelector("#problemCount"),
+  problemCountPreset: document.querySelector("#problemCountPreset"),
+  columns: document.querySelector("#columns"),
+  includeAnswers: document.querySelector("#includeAnswers"),
+  printBtn: document.querySelector("#printBtn"),
+  regenerateBtn: document.querySelector("#regenerateBtn"),
+  copyLinkBtn: document.querySelector("#copyLinkBtn"),
+  pageCount: document.querySelector("#pageCount"),
+  pages: document.querySelector("#pages"),
+  pageTemplate: document.querySelector("#pageTemplate"),
+  status: document.querySelector("#status"),
+};
+
+const stateStorageKey = "math-print-grade2-state";
+const problemCountMin = 1;
+const problemCountMax = 60;
+let statusTimer;
+let problems = [];
+
+function clampChoice(value, allowed, fallback) {
+  return allowed.includes(String(value)) ? String(value) : fallback;
+}
+
+function clampNumber(value, min, max, fallback) {
+  const parsed = Number.parseInt(value, 10);
+  if (Number.isNaN(parsed)) {
+    return fallback;
+  }
+  return Math.min(max, Math.max(min, parsed));
+}
+
+function getProblemCount() {
+  return clampNumber(els.problemCount.value, problemCountMin, problemCountMax, 30);
+}
+
+function getSettings() {
+  const type = clampChoice(els.problemType.value, ["add2", "sub2", "mix2", "times"], "add2");
+  const layout = type === "times" ? "horizontal" : clampChoice(els.layoutMode.value, ["horizontal", "vertical"], "horizontal");
+
+  return {
+    name: els.studentName.value,
+    date: els.worksheetDate.value,
+    title: els.worksheetTitle.value || "2年生 計算プリント",
+    type,
+    layout,
+    count: getProblemCount(),
+    columns: Number.parseInt(clampChoice(els.columns.value, ["2", "3"], "2"), 10),
+  };
+}
+
+function applySettings(settings) {
+  if (!settings || typeof settings !== "object") {
+    return;
+  }
+
+  els.studentName.value = settings.name || "";
+  els.worksheetDate.value = settings.date || "";
+  els.worksheetTitle.value = settings.title || "2年生 計算プリント";
+  els.problemType.value = clampChoice(settings.type, ["add2", "sub2", "mix2", "times"], "add2");
+  els.layoutMode.value = clampChoice(settings.layout, ["horizontal", "vertical"], "horizontal");
+  els.problemCount.value = String(clampNumber(settings.count, problemCountMin, problemCountMax, 30));
+  els.problemCountPreset.value = "";
+  els.columns.value = clampChoice(settings.columns, ["2", "3"], "2");
+  updateLayoutAvailability();
+}
+
+function setStatus(message) {
+  window.clearTimeout(statusTimer);
+  els.status.textContent = message;
+  statusTimer = window.setTimeout(() => {
+    els.status.textContent = "";
+  }, 2800);
+}
+
+function updateLayoutAvailability() {
+  const isTimes = els.problemType.value === "times";
+  els.layoutMode.disabled = isTimes;
+  if (isTimes) {
+    els.layoutMode.value = "horizontal";
+  }
+}
+
+function makeCandidatePool(settings) {
+  if (settings.type === "times") {
+    return makeTimesCandidates();
+  }
+
+  const ops = settings.type === "mix2" ? ["+", "-"] : [settings.type === "add2" ? "+" : "-"];
+  const candidates = [];
+  ops.forEach((op) => {
+    if (op === "+") {
+      candidates.push(...makeAdditionCandidates());
+    } else {
+      candidates.push(...makeSubtractionCandidates());
+    }
+  });
+  return candidates;
+}
+
+function makeAdditionCandidates() {
+  const candidates = [];
+  for (let a = 10; a <= 99; a += 1) {
+    for (let b = 10; b <= 99; b += 1) {
+      candidates.push({ a, b, op: "+", answer: a + b });
+    }
+  }
+  return candidates;
+}
+
+function makeSubtractionCandidates() {
+  const candidates = [];
+  for (let a = 10; a <= 99; a += 1) {
+    for (let b = 10; b <= a; b += 1) {
+      candidates.push({ a, b, op: "-", answer: a - b });
+    }
+  }
+  return candidates;
+}
+
+function makeTimesCandidates() {
+  const candidates = [];
+  for (let a = 1; a <= 9; a += 1) {
+    for (let b = 1; b <= 9; b += 1) {
+      candidates.push({ a, b, op: "×", answer: a * b });
+    }
+  }
+  return candidates;
+}
+
+function shuffle(items) {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function generateProblems(options = {}) {
+  if (options.normalizeCount !== false) {
+    els.problemCount.value = String(getProblemCount());
+  }
+  updateLayoutAvailability();
+  const settings = getSettings();
+  const pool = shuffle(makeCandidatePool(settings));
+  const selected = [];
+  const seen = new Set();
+
+  pool.forEach((problem) => {
+    if (selected.length >= settings.count) {
+      return;
+    }
+    const key = `${problem.a}${problem.op}${problem.b}`;
+    if (!seen.has(key)) {
+      selected.push(problem);
+      seen.add(key);
+    }
+  });
+
+  while (selected.length < settings.count && pool.length > 0) {
+    selected.push(pool[selected.length % pool.length]);
+  }
+
+  problems = selected;
+  render();
+  setStatus("問題を作り直しました。");
+}
+
+function makeHorizontalFormula(problem, showAnswer) {
+  const span = document.createElement("span");
+  span.className = "formula";
+  const answer = showAnswer ? `<span class="answer-value">${problem.answer}</span>` : '<span class="blank">□</span>';
+  span.innerHTML = `<span>${problem.a} ${problem.op} ${problem.b} =</span>${answer}`;
+  return span;
+}
+
+function formatDigits(value, width) {
+  return String(value).padStart(width, " ").slice(-width).split("");
+}
+
+function makeDigitRow(digits, operator = "") {
+  const row = document.createElement("span");
+  row.className = "digit-row";
+
+  const op = document.createElement("span");
+  op.className = "operator";
+  op.textContent = operator;
+  row.append(op);
+
+  digits.forEach((digit) => {
+    const cell = document.createElement("span");
+    cell.textContent = digit === " " ? "" : digit;
+    row.append(cell);
+  });
+
+  return row;
+}
+
+function makeVerticalFormula(problem, showAnswer) {
+  const formula = document.createElement("span");
+  formula.className = "vertical-formula";
+  formula.append(makeDigitRow(formatDigits(problem.a, 3)));
+  formula.append(makeDigitRow(formatDigits(problem.b, 3), problem.op));
+
+  const line = document.createElement("span");
+  line.className = "vertical-line";
+  formula.append(line);
+
+  if (showAnswer) {
+    formula.append(makeDigitRow(formatDigits(problem.answer, 3)));
+  } else {
+    const blankRow = document.createElement("span");
+    blankRow.className = "vertical-blank-row";
+    for (let i = 0; i < 3; i += 1) {
+      const blank = document.createElement("span");
+      blank.className = "vertical-blank";
+      blank.textContent = "□";
+      blankRow.append(blank);
+    }
+    formula.append(blankRow);
+  }
+
+  return formula;
+}
+
+function makeFormula(problem, showAnswer, settings) {
+  if (settings.layout === "vertical" && problem.op !== "×") {
+    return makeVerticalFormula(problem, showAnswer);
+  }
+  return makeHorizontalFormula(problem, showAnswer);
+}
+
+function renderPage(kind, showAnswer) {
+  const settings = getSettings();
+  const page = els.pageTemplate.content.firstElementChild.cloneNode(true);
+  page.querySelector("[data-name]").textContent = settings.name;
+  page.querySelector("[data-date]").textContent = settings.date;
+  page.querySelector("[data-title]").textContent = settings.title;
+  page.classList.toggle("vertical-layout", settings.layout === "vertical");
+
+  const kindLabel = page.querySelector("[data-kind]");
+  kindLabel.textContent = kind;
+  if (showAnswer) {
+    kindLabel.classList.add("answer");
+  }
+
+  const list = page.querySelector("[data-problems]");
+  list.style.setProperty("--cols", settings.columns);
+  applyGridDensity(list, settings);
+
+  problems.forEach((problem) => {
+    const item = document.createElement("li");
+    item.className = "problem";
+    item.append(makeFormula(problem, showAnswer, settings));
+    list.append(item);
+  });
+
+  return page;
+}
+
+function applyGridDensity(list, settings) {
+  const rows = Math.ceil(settings.count / settings.columns);
+  const vertical = settings.layout === "vertical";
+  let rowGap = vertical ? 6 : 8;
+  let problemMin = vertical ? 28 : 13;
+  let fontSize = vertical ? 24 : 21;
+  let blankWidth = 12;
+  let blankHeight = 9;
+
+  if (!vertical && rows > 24) {
+    rowGap = 1.5;
+    problemMin = 5.8;
+    fontSize = 16;
+    blankWidth = 8;
+    blankHeight = 5.5;
+  } else if (!vertical && rows > 18) {
+    rowGap = 3;
+    problemMin = 8.2;
+    fontSize = 18;
+    blankWidth = 10;
+    blankHeight = 7;
+  } else if (!vertical && rows > 14) {
+    rowGap = 5;
+    problemMin = 10.5;
+    fontSize = 19;
+    blankWidth = 11;
+    blankHeight = 8;
+  } else if (vertical && rows > 20) {
+    rowGap = 3;
+    problemMin = 20;
+    fontSize = 19;
+  } else if (vertical && rows > 14) {
+    rowGap = 4;
+    problemMin = 23;
+    fontSize = 21;
+  }
+
+  list.style.setProperty("--row-gap", `${rowGap}mm`);
+  list.style.setProperty("--problem-min", `${problemMin}mm`);
+  list.style.setProperty("--problem-font", `${fontSize}px`);
+  list.style.setProperty("--blank-w", `${blankWidth}mm`);
+  list.style.setProperty("--blank-h", `${blankHeight}mm`);
+}
+
+function render() {
+  updateLayoutAvailability();
+  if (!problems.length) {
+    problems = makeCandidatePool(getSettings()).slice(0, getSettings().count);
+  }
+
+  els.pages.replaceChildren(renderPage("問題", false), renderPage("答え", true));
+  els.pageCount.textContent = "2枚";
+  saveState();
+}
+
+function getShareState() {
+  return {
+    settings: getSettings(),
+    problems,
+  };
+}
+
+function encodeState(state) {
+  const json = JSON.stringify(state);
+  const bytes = new TextEncoder().encode(json);
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function decodeState(value) {
+  try {
+    const padded = value.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(value.length / 4) * 4, "=");
+    const binary = atob(padded);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes));
+  } catch {
+    return null;
+  }
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(stateStorageKey, JSON.stringify(getShareState()));
+  } catch {
+    // Local storage can be disabled; the app still works without it.
+  }
+}
+
+function loadInitialState() {
+  const hash = window.location.hash.replace(/^#data=/, "");
+  if (hash) {
+    const decoded = decodeState(hash);
+    if (decoded?.settings && Array.isArray(decoded.problems)) {
+      applySettings(decoded.settings);
+      problems = decoded.problems;
+      return;
+    }
+  }
+
+  try {
+    const saved = localStorage.getItem(stateStorageKey);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      applySettings(parsed.settings);
+      if (Array.isArray(parsed.problems)) {
+        problems = parsed.problems;
+      }
+    }
+  } catch {
+    // Ignore broken saved state.
+  }
+}
+
+async function copyShareUrl() {
+  const encoded = encodeState(getShareState());
+  const base = `${window.location.origin}${window.location.pathname}`;
+  const url = `${base}#data=${encoded}`;
+
+  try {
+    await navigator.clipboard.writeText(url);
+    setStatus("共有URLをコピーしました。");
+  } catch {
+    window.location.hash = `data=${encoded}`;
+    setStatus("URL欄に共有用データを入れました。");
+  }
+}
+
+function bindEvents() {
+  [els.studentName, els.worksheetDate, els.worksheetTitle].forEach((control) => {
+    control.addEventListener("input", render);
+  });
+
+  [els.problemType, els.problemCount].forEach((control) => {
+    control.addEventListener("change", generateProblems);
+  });
+  [els.layoutMode, els.columns].forEach((control) => {
+    control.addEventListener("change", render);
+  });
+  els.problemCount.addEventListener("input", () => {
+    if (els.problemCount.value === "") {
+      return;
+    }
+    els.problemCountPreset.value = "";
+    generateProblems({ normalizeCount: false });
+  });
+  els.problemCountPreset.addEventListener("change", () => {
+    if (!els.problemCountPreset.value) {
+      return;
+    }
+    els.problemCount.value = els.problemCountPreset.value;
+    generateProblems();
+    els.problemCountPreset.value = "";
+  });
+
+  els.printBtn.addEventListener("click", () => {
+    render();
+    window.print();
+  });
+  els.regenerateBtn.addEventListener("click", generateProblems);
+  els.copyLinkBtn.addEventListener("click", copyShareUrl);
+}
+
+loadInitialState();
+bindEvents();
+if (!problems.length) {
+  generateProblems();
+} else {
+  render();
+}

@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>計算プリント作成</title>
+  <title>2年生 計算プリント</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="app-shell">
     <aside class="controls" aria-label="プリント設定">
       <div class="brand">
-        <h1>計算プリント作成</h1>
+        <h1>2年生 計算プリント</h1>
         <div class="brand-actions">
           <a class="home-link" href="../../index.html">入口に戻る</a>
           <span id="pageCount">2枚</span>
@@ -30,33 +30,34 @@
 
       <label class="field">
         <span>プリント名</span>
-        <input id="worksheetTitle" type="text" autocomplete="off" value="1年生 計算プリント">
+        <input id="worksheetTitle" type="text" autocomplete="off" value="2年生 計算プリント">
       </label>
 
       <div class="settings-grid">
         <label class="field">
-          <span>問題タイプ</span>
+          <span>学習内容</span>
           <select id="problemType">
-            <option value="add">たし算</option>
-            <option value="sub">ひき算</option>
-            <option value="mix" selected>たし算・ひき算ミックス</option>
+            <option value="add2" selected>2けた＋2けた</option>
+            <option value="sub2">2けた−2けた</option>
+            <option value="mix2">2けた たし算・ひき算</option>
+            <option value="times">九九</option>
           </select>
         </label>
         <label class="field">
-          <span>難易度</span>
-          <select id="difficulty">
-            <option value="ten">10まで</option>
-            <option value="twenty">20まで</option>
-            <option value="bridge" selected>くり上がり・くり下がりあり</option>
+          <span>表示</span>
+          <select id="layoutMode">
+            <option value="horizontal" selected>横式</option>
+            <option value="vertical">筆算</option>
           </select>
         </label>
         <label class="field">
           <span>問題数</span>
           <span class="combo-input">
-            <input id="problemCount" type="number" min="1" max="60" step="1" value="40" inputmode="numeric">
+            <input id="problemCount" type="number" min="1" max="60" step="1" value="30" inputmode="numeric">
             <select id="problemCountPreset" aria-label="問題数の候補">
               <option value="">候補</option>
               <option value="20">20問</option>
+              <option value="30">30問</option>
               <option value="40">40問</option>
               <option value="60">60問</option>
             </select>
@@ -65,14 +66,13 @@
         <label class="field">
           <span>列数</span>
           <select id="columns">
-            <option value="2">2列</option>
-            <option value="3" selected>3列</option>
+            <option value="2" selected>2列</option>
+            <option value="3">3列</option>
           </select>
         </label>
       </div>
 
       <div class="check-row">
-        <label><input id="includeZero" type="checkbox"> 0を含める</label>
         <label><input id="includeAnswers" type="checkbox" checked disabled> 答えページをつける</label>
       </div>
 
