@@ -21,4 +21,15 @@ window.INTEGRATED_APPS = [
     status: "ready",
     accent: "#0f7b5f",
   },
+  {
+    id: "math-print",
+    title: "計算プリント作成",
+    description: "小学1年生向けのたし算・ひき算プリントを自動作成して印刷できます。",
+    category: "教材",
+    tags: ["計算", "1年生", "印刷"],
+    href: "apps/math-print/index.html",
+    actionLabel: "計算プリントを作る",
+    status: "ready",
+    accent: "#b45f06",
+  },
 ];
