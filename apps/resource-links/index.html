@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>外部教材リンク</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="controls" aria-label="外部教材リンクの検索">
+        <div class="brand">
+          <h1>外部教材リンク</h1>
+          <a class="home-link" href="../../index.html">入口に戻る</a>
+        </div>
+
+        <label class="field">
+          <span>検索</span>
+          <input id="searchInput" type="search" autocomplete="off" placeholder="プリント名・単元・サイト名で探す">
+        </label>
+
+        <div class="mode-tabs" role="tablist" aria-label="検索方法">
+          <button id="printMode" type="button" aria-pressed="true">プリントから探す</button>
+          <button id="siteMode" type="button" aria-pressed="false">サイトから探す</button>
+        </div>
+
+        <label class="field">
+          <span>学年</span>
+          <select id="gradeFilter">
+            <option value="all">すべて</option>
+            <option value="pre">入学前</option>
+            <option value="1">1年</option>
+            <option value="2">2年</option>
+            <option value="3">3年</option>
+            <option value="4">4年</option>
+            <option value="5">5年</option>
+            <option value="6">6年</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>教科</span>
+          <select id="subjectFilter">
+            <option value="all">すべて</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>単元</span>
+          <select id="unitFilter">
+            <option value="all">すべて</option>
+          </select>
+        </label>
+
+        <div class="toggle-row">
+          <label><input id="favoriteOnly" type="checkbox"> お気に入りだけ</label>
+        </div>
+
+        <div class="summary">
+          <span id="resultCount">0</span>
+          <span>件を表示中</span>
+        </div>
+
+        <p class="notice">検索結果は外部サイトへの入口です。プリントの利用条件や印刷範囲は各サイトで確認してください。</p>
+      </aside>
+
+      <main class="content">
+        <section class="hero" aria-label="説明">
+          <div>
+            <p class="eyebrow">Resource Links</p>
+            <h2 id="modeTitle">プリントをすばやく探す</h2>
+          </div>
+          <p id="modeDescription">外部サイト内のプリント候補を、学年・教科・単元・キーワードで絞り込めます。</p>
+        </section>
+
+        <section id="siteGrid" class="site-grid" aria-label="外部教材サイト一覧"></section>
+        <p id="emptyState" class="empty-state" hidden>条件に合うサイトはありません。</p>
+      </main>
+    </div>
+
+    <template id="siteCardTemplate">
+      <article class="site-card">
+        <button class="favorite-button" type="button"></button>
+        <div class="site-head">
+          <div class="site-mark" aria-hidden="true"></div>
+          <div>
+            <div class="meta-row"></div>
+            <h3></h3>
+          </div>
+        </div>
+        <p class="description"></p>
+        <div class="tag-row"></div>
+        <p class="note"></p>
+        <a class="open-link" target="_blank" rel="noopener noreferrer">外部サイトを開く</a>
+      </article>
+    </template>
+
+    <template id="printCardTemplate">
+      <article class="site-card print-card">
+        <button class="favorite-button" type="button"></button>
+        <div class="site-head">
+          <div class="site-mark print-mark" aria-hidden="true"></div>
+          <div>
+            <div class="meta-row"></div>
+            <h3></h3>
+          </div>
+        </div>
+        <p class="description"></p>
+        <div class="tag-row"></div>
+        <p class="note"></p>
+        <a class="open-link" target="_blank" rel="noopener noreferrer">プリントのページを開く</a>
+      </article>
+    </template>
+
+    <script src="sites.config.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
