@@ -2,6 +2,7 @@
   id: "time-print-grade2",
   title: "2年生 時刻・時間",
   accent: "#2563eb",
+  stateVersion: 3,
   defaultType: "read",
   defaultDifficulty: "normal",
   defaultCount: 4,
@@ -16,6 +17,7 @@ const els = {
   worksheetTitle: document.querySelector("#worksheetTitle"),
   problemType: document.querySelector("#problemType"),
   difficulty: document.querySelector("#difficulty"),
+  minuteNumbers: document.querySelector("#minuteNumbers"),
   problemCount: document.querySelector("#problemCount"),
   problemCountPreset: document.querySelector("#problemCountPreset"),
   columns: document.querySelector("#columns"),
@@ -46,6 +48,7 @@ function getSettings() {
     title: els.worksheetTitle.value || APP.title,
     type: clampChoice(els.problemType.value, typeValues(), APP.defaultType),
     difficulty: clampChoice(els.difficulty.value, difficultyValues(), APP.defaultDifficulty),
+    minuteNumbers: els.minuteNumbers.checked,
     count: getProblemCount(),
     columns: Number.parseInt(clampChoice(els.columns.value, ["1", "2"], String(APP.defaultCols)), 10),
   };
@@ -57,6 +60,7 @@ function applySettings(settings) {
   els.worksheetTitle.value = settings.title || APP.title;
   els.problemType.value = clampChoice(settings.type, typeValues(), APP.defaultType);
   els.difficulty.value = clampChoice(settings.difficulty, difficultyValues(), APP.defaultDifficulty);
+  els.minuteNumbers.checked = settings.minuteNumbers === true;
   els.problemCount.value = String(clampNumber(settings.count, problemCountMin, problemCountMax, APP.defaultCount));
   els.problemCountPreset.value = "";
   els.columns.value = clampChoice(settings.columns, ["1", "2"], String(APP.defaultCols));
@@ -73,9 +77,21 @@ function timeText(totalMinutes) {
   const minutes = ((totalMinutes % 720) + 720) % 720;
   const hour = Math.floor(minutes / 60) || 12;
   const minute = minutes % 60;
-  return minute === 0 ? `${hour}時` : `${hour}時${minute}分`;
+  return minute === 0 ? `${hour}じ` : `${hour}じ${minute}ふん`;
 }
-function clockSvg(totalMinutes, handMode = "both") {
+function minuteNumberMarks(enabled) {
+  if (!enabled) return "";
+  return Array.from({ length: 12 }, (_, i) => {
+    const hourNumber = i + 1;
+    const label = hourNumber === 12 ? "0" : String(hourNumber * 5);
+    const angle = (hourNumber * 30 - 90) * Math.PI / 180;
+    const x = 64 + Math.cos(angle) * 70;
+    const y = 67 + Math.sin(angle) * 70;
+    return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="7.5" font-weight="700" text-anchor="middle" fill="#1d4ed8" stroke="#fff" stroke-width="3" paint-order="stroke">${label}</text>`;
+  }).join("");
+}
+
+function clockSvg(totalMinutes, handMode = "both", showMinuteNumbers = false) {
   const minutes = ((totalMinutes % 720) + 720) % 720;
   const minute = minutes % 60;
   const hour = Math.floor(minutes / 60) || 12;
@@ -104,7 +120,7 @@ function clockSvg(totalMinutes, handMode = "both") {
     parts.push(`<line x1="64" y1="64" x2="${(64 + Math.cos(minuteAngle) * 43).toFixed(1)}" y2="${(64 + Math.sin(minuteAngle) * 43).toFixed(1)}" stroke="#111827" stroke-width="3" stroke-linecap="round"/>`);
   }
   parts.push(`<circle cx="64" cy="64" r="3" fill="#111827"/>`);
-  return `<svg class="clock" viewBox="0 0 128 128" width="132" height="132" role="img" aria-label="時計"><circle cx="64" cy="64" r="59" fill="#fff" stroke="#344054" stroke-width="3"/>${marks}${nums}${parts.join("")}</svg>`;
+  return `<svg class="clock" viewBox="-14 -14 156 156" width="132" height="132" role="img" aria-label="時計"><circle cx="64" cy="64" r="59" fill="#fff" stroke="#344054" stroke-width="3"/>${marks}${nums}${minuteNumberMarks(showMinuteNumbers)}${parts.join("")}</svg>`;
 }
 function rulerSvg(mm, showMark = true) {
   const width = 170;
@@ -153,53 +169,53 @@ function makeProblem(settings) {
 function makeTimeProblem(settings) {
   const step = settings.difficulty === "easy" ? 30 : settings.difficulty === "hard" ? 1 : 5;
   const base = rand(1, 11) * 60 + rand(0, Math.floor(59 / step)) * step;
-  if (settings.type === "draw") return { prompt: `${timeText(base)} の長い針をかきましょう。`, answer: timeText(base), visual: clockSvg(base, "hour"), answerVisual: clockSvg(base, "both") };
+  if (settings.type === "draw") return { prompt: `${timeText(base)} のながいはりをかきましょう。`, answer: timeText(base), visual: clockSvg(base, "hour", settings.minuteNumbers), answerVisual: clockSvg(base, "both", settings.minuteNumbers) };
   if (settings.type === "beforeAfter") {
     const delta = pick(settings.difficulty === "easy" ? [30, 60] : settings.difficulty === "hard" ? [10, 15, 25, 35, 45, 50] : [5, 10, 15, 30]);
-    const dir = pick(["後", "前"]);
-    const ans = dir === "後" ? base + delta : base - delta;
-    return { prompt: `${timeText(base)} の ${delta}分${dir} はいつですか。`, answer: timeText(ans), visual: clockSvg(base, true) };
+    const dir = pick(["あと", "まえ"]);
+    const ans = dir === "あと" ? base + delta : base - delta;
+    return { prompt: `${timeText(base)} の ${delta}ふん${dir} はいつですか。`, answer: timeText(ans), visual: clockSvg(base, true, settings.minuteNumbers) };
   }
-  return { prompt: "時計の時刻を書きましょう。", answer: timeText(base), visual: clockSvg(base, true) };
+  return { prompt: "とけいのじこくをかきましょう。", answer: timeText(base), visual: clockSvg(base, true, settings.minuteNumbers) };
 }
 function makeLengthProblem(settings) {
   const mm = settings.difficulty === "easy" ? rand(2, 10) * 10 : rand(15, 98);
   if (settings.type === "convert") {
     const cm = rand(1, 9); const extra = rand(1, 9);
-    return { prompt: `${cm}cm${extra}mm は何mmですか。`, answer: `${cm * 10 + extra}mm`, visual: rulerSvg(cm * 10 + extra, true) };
+    return { prompt: `${cm}cm${extra}mm はなんmmですか。`, answer: `${cm * 10 + extra}mm`, visual: rulerSvg(cm * 10 + extra, true) };
   }
   if (settings.type === "compare") {
     const a = rand(20, 90); const b = rand(20, 90);
-    return { prompt: `${Math.floor(a / 10)}cm${a % 10}mm と ${Math.floor(b / 10)}cm${b % 10}mm、大きいほうを書きましょう。`, answer: a === b ? "同じ" : (a > b ? `${Math.floor(a / 10)}cm${a % 10}mm` : `${Math.floor(b / 10)}cm${b % 10}mm`), visual: "" };
+    return { prompt: `${Math.floor(a / 10)}cm${a % 10}mm と ${Math.floor(b / 10)}cm${b % 10}mm、おおきいほうをかきましょう。`, answer: a === b ? "おなじ" : (a > b ? `${Math.floor(a / 10)}cm${a % 10}mm` : `${Math.floor(b / 10)}cm${b % 10}mm`), visual: "" };
   }
-  return { prompt: "青いしるしの長さを書きましょう。", answer: `${Math.floor(mm / 10)}cm${mm % 10 ? `${mm % 10}mm` : ""}`, visual: rulerSvg(mm, true) };
+  return { prompt: "あおいしるしのながさをかきましょう。", answer: `${Math.floor(mm / 10)}cm${mm % 10 ? `${mm % 10}mm` : ""}`, visual: rulerSvg(mm, true) };
 }
 function makeCapacityProblem(settings) {
   const ml = settings.difficulty === "easy" ? rand(1, 9) * 100 : rand(2, 20) * 50;
   if (settings.type === "convert") {
     const dl = rand(1, 9); const extra = rand(0, 9);
-    return { prompt: `${dl}dL${extra ? `${extra * 10}mL` : ""} は何mLですか。`, answer: `${dl * 100 + extra * 10}mL`, visual: beakerSvg(dl * 100 + extra * 10, true) };
+    return { prompt: `${dl}dL${extra ? `${extra * 10}mL` : ""} はなんmLですか。`, answer: `${dl * 100 + extra * 10}mL`, visual: beakerSvg(dl * 100 + extra * 10, true) };
   }
   if (settings.type === "compare") {
     const a = rand(2, 10); const b = rand(2, 10);
-    return { prompt: `${a}dL と ${b * 100}mL、大きいほうを書きましょう。`, answer: a * 100 === b * 100 ? "同じ" : (a > b ? `${a}dL` : `${b * 100}mL`), visual: "" };
+    return { prompt: `${a}dL と ${b * 100}mL、おおきいほうをかきましょう。`, answer: a * 100 === b * 100 ? "おなじ" : (a > b ? `${a}dL` : `${b * 100}mL`), visual: "" };
   }
-  return { prompt: "水のかさを読みましょう。", answer: ml >= 1000 ? "1L" : `${ml}mL`, visual: beakerSvg(ml, true) };
+  return { prompt: "みずのかさをよみましょう。", answer: ml >= 1000 ? "1L" : `${ml}mL`, visual: beakerSvg(ml, true) };
 }
 function makeShapeProblem(settings) {
   const shapes = ["triangle", "quadrilateral", "rectangle", "square", "rightTriangle"];
   const shape = pick(shapes);
   const names = { triangle: "三角形", quadrilateral: "四角形", rectangle: "長方形", square: "正方形", rightTriangle: "直角三角形" };
-  if (settings.type === "trace") return { prompt: "線をなぞりましょう。", answer: names[shape], visual: shapeSvg(shape, "trace"), answerVisual: shapeSvg(shape, "solid") };
-  if (settings.type === "draw") return { prompt: `${names[shape]} を方眼にかきましょう。`, answer: names[shape], visual: shapeSvg(shape, "draw"), answerVisual: shapeSvg(shape, "solid") };
-  if (settings.type === "classify") return { prompt: "この形のなかまを書きましょう。", answer: names[shape], visual: shapeSvg(shape, "solid") };
-  return { prompt: "この形の名前を書きましょう。", answer: names[shape], visual: shapeSvg(shape, "solid") };
+  if (settings.type === "trace") return { prompt: "せんをなぞりましょう。", answer: names[shape], visual: shapeSvg(shape, "trace"), answerVisual: shapeSvg(shape, "solid") };
+  if (settings.type === "draw") return { prompt: `${names[shape]} をほうがんにかきましょう。`, answer: names[shape], visual: shapeSvg(shape, "draw"), answerVisual: shapeSvg(shape, "solid") };
+  if (settings.type === "classify") return { prompt: "このかたちのなかまをかきましょう。", answer: names[shape], visual: shapeSvg(shape, "solid") };
+  return { prompt: "このかたちのなまえをかきましょう。", answer: names[shape], visual: shapeSvg(shape, "solid") };
 }
 function makeGraphProblem(settings) {
   const labels = ["りんご", "みかん", "ぶどう", "なし"];
   const values = labels.map(() => rand(1, settings.difficulty === "easy" ? 5 : 9));
   const i = rand(0, labels.length - 1);
-  if (settings.type === "makeGraph") return { prompt: "表を見て、棒グラフを完成させましょう。", answer: labels.map((l, idx) => `${l}:${values[idx]}`).join("、"), visual: makeTable(labels, values) + barGraphSvg(labels, values, false), answerVisual: makeTable(labels, values) + barGraphSvg(labels, values, true) };
+  if (settings.type === "makeGraph") return { prompt: "ひょうをみて、ぼうグラフをかんせいさせましょう。", answer: labels.map((l, idx) => `${l}:${values[idx]}`).join("、"), visual: makeTable(labels, values) + barGraphSvg(labels, values, false), answerVisual: makeTable(labels, values) + barGraphSvg(labels, values, true) };
   if (settings.type === "table") return { prompt: `${labels[i]} はいくつですか。`, answer: `${values[i]}`, visual: makeTable(labels, values) };
   return { prompt: `${labels[i]} はいくつですか。`, answer: `${values[i]}`, visual: barGraphSvg(labels, values, true) };
 }
@@ -212,7 +228,7 @@ function generateProblems(options = {}) {
   const settings = getSettings();
   problems = Array.from({ length: settings.count }, () => makeProblem(settings));
   render();
-  setStatus("問題を作り直しました。");
+  setStatus("もんだいをつくりなおしました。");
 }
 function renderProblem(problem, showAnswer) {
   const card = document.createElement("div");
@@ -225,7 +241,7 @@ function renderProblem(problem, showAnswer) {
   visual.innerHTML = showAnswer && problem.answerVisual ? problem.answerVisual : problem.visual;
   const answerLine = document.createElement("div");
   answerLine.className = "answer-line";
-  answerLine.innerHTML = showAnswer ? `<span class="answer-value">${problem.answer}</span>` : `<span class="blank">□</span><span class="small-note">答え</span>`;
+  answerLine.innerHTML = showAnswer ? `<span class="answer-value">${problem.answer}</span>` : `<span class="blank">□</span><span class="small-note">こたえ</span>`;
   card.append(prompt, visual, answerLine);
   return card;
 }
@@ -257,11 +273,11 @@ function renderPage(kind, showAnswer) {
 }
 function render() {
   normalizeProblems();
-  els.pages.replaceChildren(renderPage("問題", false), renderPage("答え", true));
+  els.pages.replaceChildren(renderPage("もんだい", false), renderPage("こたえ", true));
   els.pageCount.textContent = "2枚";
   saveState();
 }
-function getShareState() { return { settings: getSettings(), problems }; }
+function getShareState() { return { version: APP.stateVersion, settings: getSettings(), problems }; }
 function encodeState(state) {
   const bytes = new TextEncoder().encode(JSON.stringify(state));
   let binary = "";
@@ -281,14 +297,18 @@ function loadInitialState() {
   const hash = window.location.hash.replace(/^#data=/, "");
   if (hash) {
     const decoded = decodeState(hash);
-    if (decoded?.settings && Array.isArray(decoded.problems)) { applySettings(decoded.settings); problems = decoded.problems.slice(0, getSettings().count); return; }
+    if (decoded?.settings) {
+      applySettings(decoded.settings);
+      problems = decoded.version === APP.stateVersion && Array.isArray(decoded.problems) ? decoded.problems.slice(0, getSettings().count) : [];
+      return;
+    }
   }
   try {
     const saved = localStorage.getItem(stateStorageKey);
     if (saved) {
       const parsed = JSON.parse(saved);
       applySettings(parsed.settings);
-      if (Array.isArray(parsed.problems)) problems = parsed.problems.slice(0, getSettings().count);
+      if (parsed.version === APP.stateVersion && Array.isArray(parsed.problems)) problems = parsed.problems.slice(0, getSettings().count);
     }
   } catch {}
 }
@@ -300,7 +320,7 @@ async function copyShareUrl() {
 }
 function bindEvents() {
   [els.studentName, els.worksheetDate, els.worksheetTitle].forEach((control) => control.addEventListener("input", render));
-  [els.problemType, els.difficulty, els.problemCount, els.columns].forEach((control) => control.addEventListener("change", generateProblems));
+  [els.problemType, els.difficulty, els.minuteNumbers, els.problemCount, els.columns].forEach((control) => control.addEventListener("change", generateProblems));
   els.problemCount.addEventListener("input", () => { if (els.problemCount.value === "") return; els.problemCountPreset.value = ""; generateProblems(); });
   els.problemCountPreset.addEventListener("change", () => { if (!els.problemCountPreset.value) return; els.problemCount.value = els.problemCountPreset.value; generateProblems(); els.problemCountPreset.value = ""; });
   els.printBtn.addEventListener("click", () => { render(); window.print(); });

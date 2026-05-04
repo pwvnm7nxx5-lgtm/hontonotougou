@@ -1,10 +1,9 @@
 const APP = {
-  id: "capacity-print-grade2",
-  title: "2年生 水のかさ 単位変換プリント",
-  accent: "#0284c7",
-  stateVersion: 2,
-  defaultDifficulty: "easy",
-  defaultCount: 12,
+  id: "clock-print-grade1",
+  title: "1年生 とけいプリント",
+  accent: "#2563eb",
+  stateVersion: 4,
+  defaultCount: 8,
   defaultCols: 2,
 };
 
@@ -14,7 +13,9 @@ const els = {
   studentName: document.querySelector("#studentName"),
   worksheetDate: document.querySelector("#worksheetDate"),
   worksheetTitle: document.querySelector("#worksheetTitle"),
-  difficulty: document.querySelector("#difficulty"),
+  problemType: document.querySelector("#problemType"),
+  range: document.querySelector("#range"),
+  minuteLabels: document.querySelector("#minuteLabels"),
   problemCount: document.querySelector("#problemCount"),
   problemCountPreset: document.querySelector("#problemCountPreset"),
   columns: document.querySelector("#columns"),
@@ -29,7 +30,7 @@ const els = {
 
 const stateStorageKey = `${APP.id}-state`;
 const problemCountMin = 1;
-const problemCountMax = 36;
+const problemCountMax = 24;
 let statusTimer;
 let problems = [];
 
@@ -42,12 +43,16 @@ function clampNumber(value, min, max, fallback) {
   return Number.isNaN(parsed) ? fallback : Math.min(max, Math.max(min, parsed));
 }
 
-function getProblemCount() {
-  return clampNumber(els.problemCount.value, problemCountMin, problemCountMax, APP.defaultCount);
+function rand(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function difficultyValues() {
-  return [...els.difficulty.options].map((option) => option.value);
+function pick(items) {
+  return items[rand(0, items.length - 1)];
+}
+
+function getProblemCount() {
+  return clampNumber(els.problemCount.value, problemCountMin, problemCountMax, APP.defaultCount);
 }
 
 function getSettings() {
@@ -55,9 +60,11 @@ function getSettings() {
     name: els.studentName.value,
     date: els.worksheetDate.value,
     title: els.worksheetTitle.value || APP.title,
-    difficulty: clampChoice(els.difficulty.value, difficultyValues(), APP.defaultDifficulty),
+    type: clampChoice(els.problemType.value, ["read", "draw", "mix"], "read"),
+    range: clampChoice(els.range.value, ["hour", "half"], "hour"),
+    minuteLabels: els.minuteLabels.checked,
     count: getProblemCount(),
-    columns: Number.parseInt(clampChoice(els.columns.value, ["1", "2", "3"], String(APP.defaultCols)), 10),
+    columns: Number.parseInt(clampChoice(els.columns.value, ["1", "2"], String(APP.defaultCols)), 10),
   };
 }
 
@@ -65,11 +72,13 @@ function applySettings(settings) {
   if (!settings || typeof settings !== "object") return;
   els.studentName.value = settings.name || "";
   els.worksheetDate.value = settings.date || "";
-  els.worksheetTitle.value = settings.title && settings.title !== "2年生 水のかさプリント" ? settings.title : APP.title;
-  els.difficulty.value = clampChoice(settings.difficulty, difficultyValues(), APP.defaultDifficulty);
+  els.worksheetTitle.value = settings.title || APP.title;
+  els.problemType.value = clampChoice(settings.type, ["read", "draw", "mix"], "read");
+  els.range.value = clampChoice(settings.range, ["hour", "half"], "hour");
+  els.minuteLabels.checked = settings.minuteLabels === true;
   els.problemCount.value = String(clampNumber(settings.count, problemCountMin, problemCountMax, APP.defaultCount));
   els.problemCountPreset.value = "";
-  els.columns.value = clampChoice(settings.columns, ["1", "2", "3"], String(APP.defaultCols));
+  els.columns.value = clampChoice(settings.columns, ["1", "2"], String(APP.defaultCols));
 }
 
 function setStatus(message) {
@@ -80,100 +89,70 @@ function setStatus(message) {
   }, 2800);
 }
 
-function rand(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+function timeText(hour, minute) {
+  return minute === 30 ? `${hour}じはん` : `${hour}じ`;
 }
 
-function pick(items) {
-  return items[rand(0, items.length - 1)];
+function minuteLabelMarks(mode) {
+  if (mode !== "half") return "";
+  return [
+    { minute: 0, label: "0" },
+    { minute: 30, label: "30" },
+  ].map(({ minute: labelMinute, label }) => {
+    const angle = (labelMinute * 6 - 90) * Math.PI / 180;
+    const x = 64 + Math.cos(angle) * 70;
+    const y = 67 + Math.sin(angle) * 70;
+    return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="8" font-weight="700" text-anchor="middle" fill="#1d4ed8" stroke="#fff" stroke-width="3" paint-order="stroke">${label}</text>`;
+  }).join("");
 }
 
-function formatMixedDlMl(totalMl) {
-  const dl = Math.floor(totalMl / 100);
-  const ml = totalMl % 100;
-  return ml === 0 ? `${dl}dL` : `${dl}dL ${ml}mL`;
-}
-
-function formatMixedLDl(totalDl) {
-  const liter = Math.floor(totalDl / 10);
-  const dl = totalDl % 10;
-  return dl === 0 ? `${liter}L` : `${liter}L ${dl}dL`;
-}
-
-function makeEasyConversion() {
-  const patterns = [
-    () => {
-      const liter = rand(1, 9);
-      return { prompt: `${liter}L = □dL`, answer: `${liter * 10}dL` };
-    },
-    () => {
-      const dl = rand(1, 9);
-      return { prompt: `${dl}dL = □mL`, answer: `${dl * 100}mL` };
-    },
-    () => {
-      const liter = rand(1, 5);
-      return { prompt: `${liter}L = □mL`, answer: `${liter * 1000}mL` };
-    },
-  ];
-  return pick(patterns)();
-}
-
-function makeNormalConversion() {
-  const patterns = [
-    () => {
-      const liter = rand(1, 6);
-      const dl = rand(1, 9);
-      return { prompt: `${liter}L ${dl}dL = □dL`, answer: `${liter * 10 + dl}dL` };
-    },
-    () => {
-      const dl = rand(1, 9);
-      const ml = rand(1, 9) * 10;
-      return { prompt: `${dl}dL ${ml}mL = □mL`, answer: `${dl * 100 + ml}mL` };
-    },
-    () => {
-      const totalDl = rand(11, 69);
-      return { prompt: `${totalDl}dL = □L □dL`, answer: formatMixedLDl(totalDl) };
-    },
-    () => {
-      const totalMl = rand(2, 19) * 100 + rand(1, 9) * 10;
-      return { prompt: `${totalMl}mL = □dL □mL`, answer: formatMixedDlMl(totalMl) };
-    },
-  ];
-  return pick(patterns)();
-}
-
-function makeHardConversion() {
-  const patterns = [
-    () => {
-      const liter = rand(1, 4);
-      const dl = rand(1, 9);
-      const ml = rand(1, 9) * 10;
-      return { prompt: `${liter}L ${dl}dL ${ml}mL = □mL`, answer: `${liter * 1000 + dl * 100 + ml}mL` };
-    },
-    () => {
-      const totalMl = rand(12, 49) * 100 + rand(1, 9) * 10;
-      const liter = Math.floor(totalMl / 1000);
-      const restMl = totalMl % 1000;
-      const dl = Math.floor(restMl / 100);
-      const ml = restMl % 100;
-      return { prompt: `${totalMl}mL = □L □dL □mL`, answer: `${liter}L ${dl}dL ${ml}mL` };
-    },
-    () => {
-      const liter = rand(1, 8);
-      return { prompt: `${liter * 1000}mL = □L`, answer: `${liter}L` };
-    },
-    () => {
-      const totalDl = rand(12, 89);
-      return { prompt: `${totalDl}dL = □mL`, answer: `${totalDl * 100}mL` };
-    },
-  ];
-  return pick(patterns)();
+function clockSvg(hour, minute, handMode = "both", minuteLabelMode = "none") {
+  const marks = Array.from({ length: 60 }, (_, i) => {
+    const angle = (i * 6 - 90) * Math.PI / 180;
+    const outer = 56;
+    const inner = i % 5 === 0 ? 50 : 53;
+    const x1 = 64 + Math.cos(angle) * outer;
+    const y1 = 64 + Math.sin(angle) * outer;
+    const x2 = 64 + Math.cos(angle) * inner;
+    const y2 = 64 + Math.sin(angle) * inner;
+    return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#344054" stroke-width="${i % 5 === 0 ? 2 : 1}"/>`;
+  }).join("");
+  const nums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => {
+    const angle = (n * 30 - 90) * Math.PI / 180;
+    return `<text x="${(64 + Math.cos(angle) * 42).toFixed(1)}" y="${(68 + Math.sin(angle) * 42).toFixed(1)}" font-size="11" text-anchor="middle">${n}</text>`;
+  }).join("");
+  const minuteAngle = (minute * 6 - 90) * Math.PI / 180;
+  const hourAngle = (((hour % 12) + minute / 60) * 30 - 90) * Math.PI / 180;
+  const mode = handMode === true ? "both" : handMode === false ? "none" : handMode;
+  const hands = [];
+  if (mode === "both" || mode === "hour") {
+    hands.push(`<line x1="64" y1="64" x2="${(64 + Math.cos(hourAngle) * 28).toFixed(1)}" y2="${(64 + Math.sin(hourAngle) * 28).toFixed(1)}" stroke="#111827" stroke-width="5" stroke-linecap="round"/>`);
+  }
+  if (mode === "both" || mode === "minute") {
+    hands.push(`<line x1="64" y1="64" x2="${(64 + Math.cos(minuteAngle) * 43).toFixed(1)}" y2="${(64 + Math.sin(minuteAngle) * 43).toFixed(1)}" stroke="#111827" stroke-width="3" stroke-linecap="round"/>`);
+  }
+  hands.push(`<circle cx="64" cy="64" r="3" fill="#111827"/>`);
+  return `<svg class="clock" viewBox="-14 -14 156 156" width="132" height="132" role="img" aria-label="時計"><circle cx="64" cy="64" r="59" fill="#fff" stroke="#344054" stroke-width="3"/>${marks}${nums}${minuteLabelMarks(minuteLabelMode)}${hands.join("")}</svg>`;
 }
 
 function makeProblem(settings) {
-  if (settings.difficulty === "easy") return makeEasyConversion();
-  if (settings.difficulty === "hard") return makeHardConversion();
-  return makeNormalConversion();
+  const hour = rand(1, 12);
+  const minute = settings.range === "half" ? pick([0, 30]) : 0;
+  const type = settings.type === "mix" ? pick(["read", "draw"]) : settings.type;
+  const minuteLabelMode = settings.minuteLabels ? "half" : "none";
+  if (type === "draw") {
+    return {
+      prompt: `${timeText(hour, minute)} の ながいはりをかきましょう。`,
+      answer: timeText(hour, minute),
+      visual: clockSvg(hour, minute, "hour", minuteLabelMode),
+      answerVisual: clockSvg(hour, minute, "both", minuteLabelMode),
+    };
+  }
+  return {
+    prompt: "なんじですか。",
+    answer: timeText(hour, minute),
+    visual: clockSvg(hour, minute, "both", minuteLabelMode),
+  };
 }
 
 function generateProblems(options = {}) {
@@ -188,14 +167,15 @@ function renderProblem(problem, showAnswer) {
   const card = document.createElement("div");
   card.className = "problem-card";
   const prompt = document.createElement("div");
-  prompt.className = "prompt conversion-prompt";
+  prompt.className = "prompt";
   prompt.textContent = problem.prompt;
+  const visual = document.createElement("div");
+  visual.className = "visual";
+  visual.innerHTML = showAnswer && problem.answerVisual ? problem.answerVisual : problem.visual;
   const answerLine = document.createElement("div");
   answerLine.className = "answer-line";
-  answerLine.innerHTML = showAnswer
-    ? `<span class="answer-value">${problem.answer}</span>`
-    : `<span class="blank">□</span><span class="small-note">こたえ</span>`;
-  card.append(prompt, answerLine);
+  answerLine.innerHTML = showAnswer ? `<span class="answer-value">${problem.answer}</span>` : `<span class="blank">□</span><span class="small-note">こたえ</span>`;
+  card.append(prompt, visual, answerLine);
   return card;
 }
 
@@ -208,26 +188,10 @@ function renderPage(kind, showAnswer) {
   const kindLabel = page.querySelector("[data-kind]");
   kindLabel.textContent = kind;
   if (showAnswer) kindLabel.classList.add("answer");
-  if (!showAnswer && settings.difficulty === "easy") {
-    const hint = document.createElement("div");
-    hint.className = "page-hint";
-    hint.textContent = "ヒント: 1L = 10dL、1dL = 100mL、1L = 1000mL";
-    Object.assign(hint.style, {
-      margin: "-3mm 0 6mm",
-      padding: "2.5mm 4mm",
-      border: "1px solid #cfd8e3",
-      borderRadius: "6px",
-      background: "#f8fafc",
-      color: "#344054",
-      fontSize: "14px",
-      fontWeight: "700",
-    });
-    page.querySelector(".sheet-header").after(hint);
-  }
   const list = page.querySelector("[data-problems]");
   list.style.setProperty("--cols", settings.columns);
-  list.style.setProperty("--row-gap", settings.count > 24 ? "4mm" : "7mm");
-  list.style.setProperty("--problem-min", settings.count > 24 ? "24mm" : "31mm");
+  list.style.setProperty("--row-gap", settings.count > 12 ? "4mm" : "7mm");
+  list.style.setProperty("--problem-min", settings.count > 12 ? "30mm" : "39mm");
   problems.forEach((problem) => {
     const item = document.createElement("li");
     item.className = "problem";
@@ -311,7 +275,7 @@ async function copyShareUrl() {
 
 function bindEvents() {
   [els.studentName, els.worksheetDate, els.worksheetTitle].forEach((control) => control.addEventListener("input", render));
-  [els.difficulty, els.problemCount, els.columns].forEach((control) => control.addEventListener("change", generateProblems));
+  [els.problemType, els.range, els.minuteLabels, els.problemCount, els.columns].forEach((control) => control.addEventListener("change", generateProblems));
   els.problemCount.addEventListener("input", () => {
     if (els.problemCount.value === "") return;
     els.problemCountPreset.value = "";

@@ -2,7 +2,7 @@ const APP = {
   id: "shape-print-grade2",
   title: "2年生 図形 名前プリント",
   accent: "#7c3aed",
-  stateVersion: 3,
+  stateVersion: 4,
   defaultCount: 10,
   defaultCols: 2,
 };
@@ -132,7 +132,7 @@ function shapeSvg(variant) {
 
 function makeProblem(variant) {
   return {
-    prompt: "この形の名前を書きましょう。",
+    prompt: "この かたちの なまえをかきましょう。",
     answer: shapeNames[variant.shape],
     visual: shapeSvg(variant),
   };
@@ -143,7 +143,7 @@ function generateProblems(options = {}) {
   const settings = getSettings();
   problems = shuffle(shapeVariants).slice(0, settings.count).map(makeProblem);
   render();
-  setStatus("問題を作り直しました。");
+  setStatus("もんだいをつくりなおしました。");
 }
 
 function renderProblem(problem, showAnswer) {
@@ -159,7 +159,7 @@ function renderProblem(problem, showAnswer) {
   answerLine.className = "answer-line";
   answerLine.innerHTML = showAnswer
     ? `<span class="answer-value">${problem.answer}</span>`
-    : `<span class="blank">□</span><span class="small-note">答え</span>`;
+    : `<span class="blank">□</span><span class="small-note">こたえ</span>`;
   card.append(prompt, visual, answerLine);
   return card;
 }
@@ -191,7 +191,7 @@ function render() {
     const settings = getSettings();
     problems = shuffle(shapeVariants).slice(0, settings.count).map(makeProblem);
   }
-  els.pages.replaceChildren(renderPage("問題", false), renderPage("答え", true));
+  els.pages.replaceChildren(renderPage("もんだい", false), renderPage("こたえ", true));
   els.pageCount.textContent = "2枚";
   saveState();
 }

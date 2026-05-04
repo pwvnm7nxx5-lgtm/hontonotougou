@@ -20,12 +20,12 @@ const stateStorageKey = "length-print-grade2-state";
 const problemCountMin = 1;
 const problemCountMax = 36;
 const typeLabels = {
-  reading: "読み取り",
-  conversion: "単位の変換",
-  compare: "長さくらべ",
-  arithmetic: "たし算・ひき算",
-  ruler: "目もり",
-  mix: "長さミックス",
+  reading: "よみとり",
+  conversion: "たんいへんかん",
+  compare: "ながさくらべ",
+  arithmetic: "たしざん・ひきざん",
+  ruler: "めもり",
+  mix: "ながさミックス",
 };
 const ns = "http://www.w3.org/2000/svg";
 let statusTimer;
@@ -125,7 +125,7 @@ function makeReadingProblem(difficulty) {
   const value = randomInt(1, Math.floor(max / step)) * step;
   return {
     kind: "reading",
-    prompt: "矢印までの長さを読みましょう。",
+    prompt: "やじるしまでのながさをよみましょう。",
     answer: formatLength(value),
     figure: { type: "ruler", start: 0, end: value, max },
   };
@@ -179,7 +179,7 @@ function makeCompareProblem(difficulty) {
   const sign = a === b ? "=" : a > b ? ">" : "<";
   return {
     kind: "compare",
-    prompt: `どちらが長いか、>、<、=で書きましょう。 ${formatLength(a)}  □  ${formatLength(b)}`,
+    prompt: `どちらがながいか、>、<、=でかきましょう。 ${formatLength(a)}  □  ${formatLength(b)}`,
     answer: sign,
     compactAnswer: true,
   };
@@ -213,7 +213,7 @@ function makeRulerProblem(difficulty) {
   const end = Math.min(max, rawEnd);
   return {
     kind: "ruler",
-    prompt: "アからイまでの長さは何cm何mmですか。",
+    prompt: "アからイまでのながさはなんcmなんmmですか。",
     answer: formatLength(end - start),
     figure: { type: "ruler", start, end, max, labels: ["ア", "イ"] },
   };
@@ -243,7 +243,7 @@ function generateProblems(options = {}) {
   const settings = getSettings();
   problems = Array.from({ length: settings.count }, () => makeProblem(settings));
   render();
-  setStatus("問題を作り直しました。");
+  setStatus("もんだいをつくりなおしました。");
 }
 
 function svgEl(name, attrs = {}) {
@@ -304,12 +304,12 @@ function makeAnswer(problem, showAnswer) {
     const value = document.createElement("span");
     value.className = "answer-value";
     value.textContent = problem.answer;
-    wrap.append("答え ", value);
+    wrap.append("こたえ ", value);
     return wrap;
   }
 
   if (problem.kind === "compare") {
-    wrap.append(document.createTextNode("答え "));
+    wrap.append(document.createTextNode("こたえ "));
     const blank = document.createElement("span");
     blank.className = "blank compare-blank";
     blank.textContent = "□";
@@ -320,7 +320,7 @@ function makeAnswer(problem, showAnswer) {
   const blank = document.createElement("span");
   blank.className = "blank";
   blank.textContent = "□";
-  wrap.append("答え ", blank);
+  wrap.append("こたえ ", blank);
   if (problem.unitAfterBlank) {
     const unit = document.createElement("span");
     unit.textContent = problem.unitAfterBlank;
@@ -416,8 +416,8 @@ function render() {
     problems = Array.from({ length: getSettings().count }, () => makeProblem(getSettings()));
   }
   const settings = getSettings();
-  const label = typeLabels[settings.type] || "問題";
-  els.pages.replaceChildren(renderPage(label, false), renderPage("答え", true));
+  const label = typeLabels[settings.type] || "もんだい";
+  els.pages.replaceChildren(renderPage(label, false), renderPage("こたえ", true));
   els.pageCount.textContent = "2枚";
   saveState();
 }
