@@ -2,7 +2,7 @@ const APP = {
   id: "clock-print-grade1",
   title: "1年生 とけいプリント",
   accent: "#2563eb",
-  stateVersion: 2,
+  stateVersion: 4,
   defaultCount: 8,
   defaultCols: 2,
 };
@@ -15,6 +15,7 @@ const els = {
   worksheetTitle: document.querySelector("#worksheetTitle"),
   problemType: document.querySelector("#problemType"),
   range: document.querySelector("#range"),
+  minuteLabels: document.querySelector("#minuteLabels"),
   problemCount: document.querySelector("#problemCount"),
   problemCountPreset: document.querySelector("#problemCountPreset"),
   columns: document.querySelector("#columns"),
@@ -61,6 +62,7 @@ function getSettings() {
     title: els.worksheetTitle.value || APP.title,
     type: clampChoice(els.problemType.value, ["read", "draw", "mix"], "read"),
     range: clampChoice(els.range.value, ["hour", "half"], "hour"),
+    minuteLabels: els.minuteLabels.checked,
     count: getProblemCount(),
     columns: Number.parseInt(clampChoice(els.columns.value, ["1", "2"], String(APP.defaultCols)), 10),
   };
@@ -73,6 +75,7 @@ function applySettings(settings) {
   els.worksheetTitle.value = settings.title || APP.title;
   els.problemType.value = clampChoice(settings.type, ["read", "draw", "mix"], "read");
   els.range.value = clampChoice(settings.range, ["hour", "half"], "hour");
+  els.minuteLabels.checked = settings.minuteLabels === true;
   els.problemCount.value = String(clampNumber(settings.count, problemCountMin, problemCountMax, APP.defaultCount));
   els.problemCountPreset.value = "";
   els.columns.value = clampChoice(settings.columns, ["1", "2"], String(APP.defaultCols));
@@ -90,7 +93,20 @@ function timeText(hour, minute) {
   return minute === 30 ? `${hour}じはん` : `${hour}じ`;
 }
 
-function clockSvg(hour, minute, showHands) {
+function minuteLabelMarks(mode) {
+  if (mode !== "half") return "";
+  return [
+    { minute: 0, label: "0" },
+    { minute: 30, label: "30" },
+  ].map(({ minute: labelMinute, label }) => {
+    const angle = (labelMinute * 6 - 90) * Math.PI / 180;
+    const x = 64 + Math.cos(angle) * 70;
+    const y = 67 + Math.sin(angle) * 70;
+    return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="8" font-weight="700" text-anchor="middle" fill="#1d4ed8" stroke="#fff" stroke-width="3" paint-order="stroke">${label}</text>`;
+  }).join("");
+}
+
+function clockSvg(hour, minute, handMode = "both", minuteLabelMode = "none") {
   const marks = Array.from({ length: 60 }, (_, i) => {
     const angle = (i * 6 - 90) * Math.PI / 180;
     const outer = 56;
@@ -107,28 +123,35 @@ function clockSvg(hour, minute, showHands) {
   }).join("");
   const minuteAngle = (minute * 6 - 90) * Math.PI / 180;
   const hourAngle = (((hour % 12) + minute / 60) * 30 - 90) * Math.PI / 180;
-  const hands = showHands
-    ? `<line x1="64" y1="64" x2="${(64 + Math.cos(hourAngle) * 28).toFixed(1)}" y2="${(64 + Math.sin(hourAngle) * 28).toFixed(1)}" stroke="#111827" stroke-width="5" stroke-linecap="round"/><line x1="64" y1="64" x2="${(64 + Math.cos(minuteAngle) * 43).toFixed(1)}" y2="${(64 + Math.sin(minuteAngle) * 43).toFixed(1)}" stroke="#111827" stroke-width="3" stroke-linecap="round"/><circle cx="64" cy="64" r="3" fill="#111827"/>`
-    : `<circle cx="64" cy="64" r="3" fill="#111827"/>`;
-  return `<svg class="clock" viewBox="0 0 128 128" width="132" height="132" role="img" aria-label="時計"><circle cx="64" cy="64" r="59" fill="#fff" stroke="#344054" stroke-width="3"/>${marks}${nums}${hands}</svg>`;
+  const mode = handMode === true ? "both" : handMode === false ? "none" : handMode;
+  const hands = [];
+  if (mode === "both" || mode === "hour") {
+    hands.push(`<line x1="64" y1="64" x2="${(64 + Math.cos(hourAngle) * 28).toFixed(1)}" y2="${(64 + Math.sin(hourAngle) * 28).toFixed(1)}" stroke="#111827" stroke-width="5" stroke-linecap="round"/>`);
+  }
+  if (mode === "both" || mode === "minute") {
+    hands.push(`<line x1="64" y1="64" x2="${(64 + Math.cos(minuteAngle) * 43).toFixed(1)}" y2="${(64 + Math.sin(minuteAngle) * 43).toFixed(1)}" stroke="#111827" stroke-width="3" stroke-linecap="round"/>`);
+  }
+  hands.push(`<circle cx="64" cy="64" r="3" fill="#111827"/>`);
+  return `<svg class="clock" viewBox="-14 -14 156 156" width="132" height="132" role="img" aria-label="時計"><circle cx="64" cy="64" r="59" fill="#fff" stroke="#344054" stroke-width="3"/>${marks}${nums}${minuteLabelMarks(minuteLabelMode)}${hands.join("")}</svg>`;
 }
 
 function makeProblem(settings) {
   const hour = rand(1, 12);
   const minute = settings.range === "half" ? pick([0, 30]) : 0;
   const type = settings.type === "mix" ? pick(["read", "draw"]) : settings.type;
+  const minuteLabelMode = settings.minuteLabels ? "half" : "none";
   if (type === "draw") {
     return {
-      prompt: `${timeText(hour, minute)} の はりをかきましょう。`,
+      prompt: `${timeText(hour, minute)} の ながいはりをかきましょう。`,
       answer: timeText(hour, minute),
-      visual: clockSvg(hour, minute, false),
-      answerVisual: clockSvg(hour, minute, true),
+      visual: clockSvg(hour, minute, "hour", minuteLabelMode),
+      answerVisual: clockSvg(hour, minute, "both", minuteLabelMode),
     };
   }
   return {
     prompt: "なんじですか。",
     answer: timeText(hour, minute),
-    visual: clockSvg(hour, minute, true),
+    visual: clockSvg(hour, minute, "both", minuteLabelMode),
   };
 }
 
@@ -252,7 +275,7 @@ async function copyShareUrl() {
 
 function bindEvents() {
   [els.studentName, els.worksheetDate, els.worksheetTitle].forEach((control) => control.addEventListener("input", render));
-  [els.problemType, els.range, els.problemCount, els.columns].forEach((control) => control.addEventListener("change", generateProblems));
+  [els.problemType, els.range, els.minuteLabels, els.problemCount, els.columns].forEach((control) => control.addEventListener("change", generateProblems));
   els.problemCount.addEventListener("input", () => {
     if (els.problemCount.value === "") return;
     els.problemCountPreset.value = "";
