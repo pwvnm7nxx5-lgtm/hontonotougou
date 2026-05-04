@@ -15,7 +15,7 @@
         </div>
         <div class="status-pill">
           <span id="appCount">0</span>
-          <span>apps</span>
+          <span>件</span>
         </div>
       </header>
 
@@ -24,7 +24,13 @@
           <span>検索</span>
           <input id="searchInput" type="search" autocomplete="off" placeholder="アプリ名・用途で探す" />
         </label>
-        <div id="categoryFilters" class="filter-row" aria-label="カテゴリ"></div>
+        <div class="filter-stack">
+          <div id="gradeFilters" class="filter-row grade-row" aria-label="学年"></div>
+          <div class="filter-line">
+            <div id="categoryFilters" class="filter-row" aria-label="カテゴリ"></div>
+            <button id="favoriteFilter" class="favorite-filter" type="button" aria-pressed="false">お気に入り</button>
+          </div>
+        </div>
       </section>
 
       <section id="appGrid" class="app-grid" aria-label="アプリ一覧"></section>
