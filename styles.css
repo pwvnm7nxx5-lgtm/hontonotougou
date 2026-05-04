@@ -85,6 +85,34 @@ h1 {
   white-space: nowrap;
 }
 
+.top-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.resource-shortcut {
+  display: inline-grid;
+  place-items: center;
+  min-height: 40px;
+  border: 1px solid #0f766e;
+  border-radius: 6px;
+  background: #0f766e;
+  color: #ffffff;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.resource-shortcut:focus {
+  outline: 3px solid rgb(15 118 110 / 24%);
+  outline-offset: 2px;
+}
+
 .status-pill span:first-child {
   color: var(--text);
   font-size: 18px;
@@ -349,6 +377,10 @@ h2 {
   .status-pill {
     justify-content: center;
     width: max-content;
+  }
+
+  .top-actions {
+    justify-content: flex-start;
   }
 
   .filter-row {
