@@ -74,7 +74,7 @@ function timeText(totalMinutes) {
   const minutes = ((totalMinutes % 720) + 720) % 720;
   const hour = Math.floor(minutes / 60) || 12;
   const minute = minutes % 60;
-  return minute === 0 ? `${hour}時` : `${hour}時${minute}分`;
+  return minute === 0 ? `${hour}じ` : `${hour}じ${minute}ふん`;
 }
 function clockSvg(totalMinutes, showHands = true) {
   const minutes = ((totalMinutes % 720) + 720) % 720;
@@ -155,53 +155,53 @@ function makeProblem(settings) {
 function makeTimeProblem(settings) {
   const step = settings.difficulty === "easy" ? 30 : settings.difficulty === "hard" ? 1 : 5;
   const base = rand(1, 11) * 60 + rand(0, Math.floor(59 / step)) * step;
-  if (settings.type === "draw") return { prompt: `${timeText(base)} の針をかきましょう。`, answer: timeText(base), visual: clockSvg(base, false), answerVisual: clockSvg(base, true) };
+  if (settings.type === "draw") return { prompt: `${timeText(base)} のはりをかきましょう。`, answer: timeText(base), visual: clockSvg(base, false), answerVisual: clockSvg(base, true) };
   if (settings.type === "beforeAfter") {
     const delta = pick(settings.difficulty === "easy" ? [30, 60] : settings.difficulty === "hard" ? [10, 15, 25, 35, 45, 50] : [5, 10, 15, 30]);
-    const dir = pick(["後", "前"]);
-    const ans = dir === "後" ? base + delta : base - delta;
-    return { prompt: `${timeText(base)} の ${delta}分${dir} はいつですか。`, answer: timeText(ans), visual: clockSvg(base, true) };
+    const dir = pick(["あと", "まえ"]);
+    const ans = dir === "あと" ? base + delta : base - delta;
+    return { prompt: `${timeText(base)} の ${delta}ふん${dir} はいつですか。`, answer: timeText(ans), visual: clockSvg(base, true) };
   }
-  return { prompt: "時計の時刻を書きましょう。", answer: timeText(base), visual: clockSvg(base, true) };
+  return { prompt: "とけいのじこくをかきましょう。", answer: timeText(base), visual: clockSvg(base, true) };
 }
 function makeLengthProblem(settings) {
   const mm = settings.difficulty === "easy" ? rand(2, 10) * 10 : rand(15, 98);
   if (settings.type === "convert") {
     const cm = rand(1, 9); const extra = rand(1, 9);
-    return { prompt: `${cm}cm${extra}mm は何mmですか。`, answer: `${cm * 10 + extra}mm`, visual: rulerSvg(cm * 10 + extra, true) };
+    return { prompt: `${cm}cm${extra}mm はなんmmですか。`, answer: `${cm * 10 + extra}mm`, visual: rulerSvg(cm * 10 + extra, true) };
   }
   if (settings.type === "compare") {
     const a = rand(20, 90); const b = rand(20, 90);
-    return { prompt: `${Math.floor(a / 10)}cm${a % 10}mm と ${Math.floor(b / 10)}cm${b % 10}mm、大きいほうを書きましょう。`, answer: a === b ? "同じ" : (a > b ? `${Math.floor(a / 10)}cm${a % 10}mm` : `${Math.floor(b / 10)}cm${b % 10}mm`), visual: "" };
+    return { prompt: `${Math.floor(a / 10)}cm${a % 10}mm と ${Math.floor(b / 10)}cm${b % 10}mm、おおきいほうをかきましょう。`, answer: a === b ? "おなじ" : (a > b ? `${Math.floor(a / 10)}cm${a % 10}mm` : `${Math.floor(b / 10)}cm${b % 10}mm`), visual: "" };
   }
-  return { prompt: "青いしるしの長さを書きましょう。", answer: `${Math.floor(mm / 10)}cm${mm % 10 ? `${mm % 10}mm` : ""}`, visual: rulerSvg(mm, true) };
+  return { prompt: "あおいしるしのながさをかきましょう。", answer: `${Math.floor(mm / 10)}cm${mm % 10 ? `${mm % 10}mm` : ""}`, visual: rulerSvg(mm, true) };
 }
 function makeCapacityProblem(settings) {
   const ml = settings.difficulty === "easy" ? rand(1, 9) * 100 : rand(2, 20) * 50;
   if (settings.type === "convert") {
     const dl = rand(1, 9); const extra = rand(0, 9);
-    return { prompt: `${dl}dL${extra ? `${extra * 10}mL` : ""} は何mLですか。`, answer: `${dl * 100 + extra * 10}mL`, visual: beakerSvg(dl * 100 + extra * 10, true) };
+    return { prompt: `${dl}dL${extra ? `${extra * 10}mL` : ""} はなんmLですか。`, answer: `${dl * 100 + extra * 10}mL`, visual: beakerSvg(dl * 100 + extra * 10, true) };
   }
   if (settings.type === "compare") {
     const a = rand(2, 10); const b = rand(2, 10);
-    return { prompt: `${a}dL と ${b * 100}mL、大きいほうを書きましょう。`, answer: a * 100 === b * 100 ? "同じ" : (a > b ? `${a}dL` : `${b * 100}mL`), visual: "" };
+    return { prompt: `${a}dL と ${b * 100}mL、おおきいほうをかきましょう。`, answer: a * 100 === b * 100 ? "おなじ" : (a > b ? `${a}dL` : `${b * 100}mL`), visual: "" };
   }
-  return { prompt: "水のかさを読みましょう。", answer: ml >= 1000 ? "1L" : `${ml}mL`, visual: beakerSvg(ml, true) };
+  return { prompt: "みずのかさをよみましょう。", answer: ml >= 1000 ? "1L" : `${ml}mL`, visual: beakerSvg(ml, true) };
 }
 function makeShapeProblem(settings) {
   const shapes = ["triangle", "quadrilateral", "rectangle", "square", "rightTriangle"];
   const shape = pick(shapes);
   const names = { triangle: "三角形", quadrilateral: "四角形", rectangle: "長方形", square: "正方形", rightTriangle: "直角三角形" };
-  if (settings.type === "trace") return { prompt: "線をなぞりましょう。", answer: names[shape], visual: shapeSvg(shape, "trace"), answerVisual: shapeSvg(shape, "solid") };
-  if (settings.type === "draw") return { prompt: `${names[shape]} を方眼にかきましょう。`, answer: names[shape], visual: shapeSvg(shape, "draw"), answerVisual: shapeSvg(shape, "solid") };
-  if (settings.type === "classify") return { prompt: "この形のなかまを書きましょう。", answer: names[shape], visual: shapeSvg(shape, "solid") };
-  return { prompt: "この形の名前を書きましょう。", answer: names[shape], visual: shapeSvg(shape, "solid") };
+  if (settings.type === "trace") return { prompt: "せんをなぞりましょう。", answer: names[shape], visual: shapeSvg(shape, "trace"), answerVisual: shapeSvg(shape, "solid") };
+  if (settings.type === "draw") return { prompt: `${names[shape]} をほうがんにかきましょう。`, answer: names[shape], visual: shapeSvg(shape, "draw"), answerVisual: shapeSvg(shape, "solid") };
+  if (settings.type === "classify") return { prompt: "このかたちのなかまをかきましょう。", answer: names[shape], visual: shapeSvg(shape, "solid") };
+  return { prompt: "このかたちのなまえをかきましょう。", answer: names[shape], visual: shapeSvg(shape, "solid") };
 }
 function makeGraphProblem(settings) {
   const labels = ["りんご", "みかん", "ぶどう", "なし"];
   const values = labels.map(() => rand(1, settings.difficulty === "easy" ? 5 : 9));
   const i = rand(0, labels.length - 1);
-  if (settings.type === "makeGraph") return { prompt: "表を見て、棒グラフを完成させましょう。", answer: labels.map((l, idx) => `${l}:${values[idx]}`).join("、"), visual: makeTable(labels, values) + barGraphSvg(labels, values, false, settings.difficulty), answerVisual: makeTable(labels, values) + barGraphSvg(labels, values, true, settings.difficulty) };
+  if (settings.type === "makeGraph") return { prompt: "ひょうをみて、ぼうグラフをかんせいさせましょう。", answer: labels.map((l, idx) => `${l}:${values[idx]}`).join("、"), visual: makeTable(labels, values) + barGraphSvg(labels, values, false, settings.difficulty), answerVisual: makeTable(labels, values) + barGraphSvg(labels, values, true, settings.difficulty) };
   if (settings.type === "table") return { prompt: `${labels[i]} はいくつですか。`, answer: `${values[i]}`, visual: makeTable(labels, values) };
   return { prompt: `${labels[i]} はいくつですか。`, answer: `${values[i]}`, visual: barGraphSvg(labels, values, true, settings.difficulty) };
 }
@@ -214,7 +214,7 @@ function generateProblems(options = {}) {
   const settings = getSettings();
   problems = Array.from({ length: settings.count }, () => makeProblem(settings));
   render();
-  setStatus("問題を作り直しました。");
+  setStatus("もんだいをつくりなおしました。");
 }
 function renderProblem(problem, showAnswer) {
   const card = document.createElement("div");
@@ -227,7 +227,7 @@ function renderProblem(problem, showAnswer) {
   visual.innerHTML = showAnswer && problem.answerVisual ? problem.answerVisual : problem.visual;
   const answerLine = document.createElement("div");
   answerLine.className = "answer-line";
-  answerLine.innerHTML = showAnswer ? `<span class="answer-value">${problem.answer}</span>` : `<span class="blank">□</span><span class="small-note">答え</span>`;
+  answerLine.innerHTML = showAnswer ? `<span class="answer-value">${problem.answer}</span>` : `<span class="blank">□</span><span class="small-note">こたえ</span>`;
   card.append(prompt, visual, answerLine);
   return card;
 }
@@ -254,7 +254,7 @@ function renderPage(kind, showAnswer) {
 }
 function render() {
   if (!problems.length) problems = Array.from({ length: getSettings().count }, () => makeProblem(getSettings()));
-  els.pages.replaceChildren(renderPage("問題", false), renderPage("答え", true));
+  els.pages.replaceChildren(renderPage("もんだい", false), renderPage("こたえ", true));
   els.pageCount.textContent = "2枚";
   saveState();
 }

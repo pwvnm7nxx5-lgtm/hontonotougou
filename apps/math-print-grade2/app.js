@@ -169,7 +169,7 @@ function generateProblems(options = {}) {
 
   problems = selected;
   render();
-  setStatus("問題を作り直しました。");
+  setStatus("もんだいをつくりなおしました。");
 }
 
 function makeHorizontalFormula(problem, showAnswer) {
@@ -314,7 +314,7 @@ function render() {
     problems = makeCandidatePool(getSettings()).slice(0, getSettings().count);
   }
 
-  els.pages.replaceChildren(renderPage("問題", false), renderPage("答え", true));
+  els.pages.replaceChildren(renderPage("もんだい", false), renderPage("こたえ", true));
   els.pageCount.textContent = "2枚";
   saveState();
 }

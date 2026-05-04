@@ -1,10 +1,9 @@
 const APP = {
-  id: "capacity-print-grade2",
-  title: "2年生 水のかさ 単位変換プリント",
-  accent: "#0284c7",
+  id: "shape-print-grade1",
+  title: "1年生 かたちプリント",
+  accent: "#7c3aed",
   stateVersion: 2,
-  defaultDifficulty: "easy",
-  defaultCount: 12,
+  defaultCount: 10,
   defaultCols: 2,
 };
 
@@ -14,7 +13,6 @@ const els = {
   studentName: document.querySelector("#studentName"),
   worksheetDate: document.querySelector("#worksheetDate"),
   worksheetTitle: document.querySelector("#worksheetTitle"),
-  difficulty: document.querySelector("#difficulty"),
   problemCount: document.querySelector("#problemCount"),
   problemCountPreset: document.querySelector("#problemCountPreset"),
   columns: document.querySelector("#columns"),
@@ -29,9 +27,32 @@ const els = {
 
 const stateStorageKey = `${APP.id}-state`;
 const problemCountMin = 1;
-const problemCountMax = 36;
+const problemCountMax = 12;
 let statusTimer;
 let problems = [];
+
+const variants = [
+  { shape: "circle", rotate: 0 },
+  { shape: "triangle", rotate: 0 },
+  { shape: "triangle", rotate: 90 },
+  { shape: "triangle", rotate: 180 },
+  { shape: "square", rotate: 0 },
+  { shape: "square", rotate: 45 },
+  { shape: "rectangle", rotate: 0 },
+  { shape: "rectangle", rotate: 90 },
+  { shape: "quadrilateral", rotate: 0 },
+  { shape: "quadrilateral", rotate: 90 },
+  { shape: "quadrilateral", rotate: 180 },
+  { shape: "quadrilateral", rotate: 270 },
+];
+
+const names = {
+  circle: "まる",
+  triangle: "三角",
+  square: "正方形",
+  rectangle: "長方形",
+  quadrilateral: "四角",
+};
 
 function clampChoice(value, allowed, fallback) {
   return allowed.includes(String(value)) ? String(value) : fallback;
@@ -42,12 +63,21 @@ function clampNumber(value, min, max, fallback) {
   return Number.isNaN(parsed) ? fallback : Math.min(max, Math.max(min, parsed));
 }
 
-function getProblemCount() {
-  return clampNumber(els.problemCount.value, problemCountMin, problemCountMax, APP.defaultCount);
+function rand(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function difficultyValues() {
-  return [...els.difficulty.options].map((option) => option.value);
+function shuffle(items) {
+  const result = [...items];
+  for (let i = result.length - 1; i > 0; i -= 1) {
+    const j = rand(0, i);
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+function getProblemCount() {
+  return clampNumber(els.problemCount.value, problemCountMin, problemCountMax, APP.defaultCount);
 }
 
 function getSettings() {
@@ -55,7 +85,6 @@ function getSettings() {
     name: els.studentName.value,
     date: els.worksheetDate.value,
     title: els.worksheetTitle.value || APP.title,
-    difficulty: clampChoice(els.difficulty.value, difficultyValues(), APP.defaultDifficulty),
     count: getProblemCount(),
     columns: Number.parseInt(clampChoice(els.columns.value, ["1", "2", "3"], String(APP.defaultCols)), 10),
   };
@@ -65,8 +94,7 @@ function applySettings(settings) {
   if (!settings || typeof settings !== "object") return;
   els.studentName.value = settings.name || "";
   els.worksheetDate.value = settings.date || "";
-  els.worksheetTitle.value = settings.title && settings.title !== "2年生 水のかさプリント" ? settings.title : APP.title;
-  els.difficulty.value = clampChoice(settings.difficulty, difficultyValues(), APP.defaultDifficulty);
+  els.worksheetTitle.value = settings.title || APP.title;
   els.problemCount.value = String(clampNumber(settings.count, problemCountMin, problemCountMax, APP.defaultCount));
   els.problemCountPreset.value = "";
   els.columns.value = clampChoice(settings.columns, ["1", "2", "3"], String(APP.defaultCols));
@@ -80,106 +108,29 @@ function setStatus(message) {
   }, 2800);
 }
 
-function rand(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+function shapeSvg(variant) {
+  const paths = {
+    circle: `<circle class="shape-path" cx="80" cy="80" r="42"/>`,
+    triangle: `<path class="shape-path" d="M38 118 L86 32 L130 118 Z"/>`,
+    square: `<path class="shape-path" d="M44 44 H116 V116 H44 Z"/>`,
+    rectangle: `<path class="shape-path" d="M34 52 H126 V108 H34 Z"/>`,
+    quadrilateral: `<path class="shape-path" d="M44 44 H124 L112 116 H32 Z"/>`,
+  };
+  return `<svg viewBox="0 0 160 160" width="150" height="150" aria-label="${names[variant.shape]}"><g transform="rotate(${variant.rotate} 80 80)">${paths[variant.shape]}</g></svg>`;
 }
 
-function pick(items) {
-  return items[rand(0, items.length - 1)];
-}
-
-function formatMixedDlMl(totalMl) {
-  const dl = Math.floor(totalMl / 100);
-  const ml = totalMl % 100;
-  return ml === 0 ? `${dl}dL` : `${dl}dL ${ml}mL`;
-}
-
-function formatMixedLDl(totalDl) {
-  const liter = Math.floor(totalDl / 10);
-  const dl = totalDl % 10;
-  return dl === 0 ? `${liter}L` : `${liter}L ${dl}dL`;
-}
-
-function makeEasyConversion() {
-  const patterns = [
-    () => {
-      const liter = rand(1, 9);
-      return { prompt: `${liter}L = □dL`, answer: `${liter * 10}dL` };
-    },
-    () => {
-      const dl = rand(1, 9);
-      return { prompt: `${dl}dL = □mL`, answer: `${dl * 100}mL` };
-    },
-    () => {
-      const liter = rand(1, 5);
-      return { prompt: `${liter}L = □mL`, answer: `${liter * 1000}mL` };
-    },
-  ];
-  return pick(patterns)();
-}
-
-function makeNormalConversion() {
-  const patterns = [
-    () => {
-      const liter = rand(1, 6);
-      const dl = rand(1, 9);
-      return { prompt: `${liter}L ${dl}dL = □dL`, answer: `${liter * 10 + dl}dL` };
-    },
-    () => {
-      const dl = rand(1, 9);
-      const ml = rand(1, 9) * 10;
-      return { prompt: `${dl}dL ${ml}mL = □mL`, answer: `${dl * 100 + ml}mL` };
-    },
-    () => {
-      const totalDl = rand(11, 69);
-      return { prompt: `${totalDl}dL = □L □dL`, answer: formatMixedLDl(totalDl) };
-    },
-    () => {
-      const totalMl = rand(2, 19) * 100 + rand(1, 9) * 10;
-      return { prompt: `${totalMl}mL = □dL □mL`, answer: formatMixedDlMl(totalMl) };
-    },
-  ];
-  return pick(patterns)();
-}
-
-function makeHardConversion() {
-  const patterns = [
-    () => {
-      const liter = rand(1, 4);
-      const dl = rand(1, 9);
-      const ml = rand(1, 9) * 10;
-      return { prompt: `${liter}L ${dl}dL ${ml}mL = □mL`, answer: `${liter * 1000 + dl * 100 + ml}mL` };
-    },
-    () => {
-      const totalMl = rand(12, 49) * 100 + rand(1, 9) * 10;
-      const liter = Math.floor(totalMl / 1000);
-      const restMl = totalMl % 1000;
-      const dl = Math.floor(restMl / 100);
-      const ml = restMl % 100;
-      return { prompt: `${totalMl}mL = □L □dL □mL`, answer: `${liter}L ${dl}dL ${ml}mL` };
-    },
-    () => {
-      const liter = rand(1, 8);
-      return { prompt: `${liter * 1000}mL = □L`, answer: `${liter}L` };
-    },
-    () => {
-      const totalDl = rand(12, 89);
-      return { prompt: `${totalDl}dL = □mL`, answer: `${totalDl * 100}mL` };
-    },
-  ];
-  return pick(patterns)();
-}
-
-function makeProblem(settings) {
-  if (settings.difficulty === "easy") return makeEasyConversion();
-  if (settings.difficulty === "hard") return makeHardConversion();
-  return makeNormalConversion();
+function makeProblem(variant) {
+  return {
+    prompt: "この かたちの なまえをかきましょう。",
+    answer: names[variant.shape],
+    visual: shapeSvg(variant),
+  };
 }
 
 function generateProblems(options = {}) {
   if (options.normalizeCount !== false) els.problemCount.value = String(getProblemCount());
   const settings = getSettings();
-  problems = Array.from({ length: settings.count }, () => makeProblem(settings));
+  problems = shuffle(variants).slice(0, settings.count).map(makeProblem);
   render();
   setStatus("もんだいをつくりなおしました。");
 }
@@ -188,14 +139,15 @@ function renderProblem(problem, showAnswer) {
   const card = document.createElement("div");
   card.className = "problem-card";
   const prompt = document.createElement("div");
-  prompt.className = "prompt conversion-prompt";
+  prompt.className = "prompt";
   prompt.textContent = problem.prompt;
+  const visual = document.createElement("div");
+  visual.className = "visual";
+  visual.innerHTML = problem.visual;
   const answerLine = document.createElement("div");
   answerLine.className = "answer-line";
-  answerLine.innerHTML = showAnswer
-    ? `<span class="answer-value">${problem.answer}</span>`
-    : `<span class="blank">□</span><span class="small-note">こたえ</span>`;
-  card.append(prompt, answerLine);
+  answerLine.innerHTML = showAnswer ? `<span class="answer-value">${problem.answer}</span>` : `<span class="blank">□</span><span class="small-note">こたえ</span>`;
+  card.append(prompt, visual, answerLine);
   return card;
 }
 
@@ -208,26 +160,10 @@ function renderPage(kind, showAnswer) {
   const kindLabel = page.querySelector("[data-kind]");
   kindLabel.textContent = kind;
   if (showAnswer) kindLabel.classList.add("answer");
-  if (!showAnswer && settings.difficulty === "easy") {
-    const hint = document.createElement("div");
-    hint.className = "page-hint";
-    hint.textContent = "ヒント: 1L = 10dL、1dL = 100mL、1L = 1000mL";
-    Object.assign(hint.style, {
-      margin: "-3mm 0 6mm",
-      padding: "2.5mm 4mm",
-      border: "1px solid #cfd8e3",
-      borderRadius: "6px",
-      background: "#f8fafc",
-      color: "#344054",
-      fontSize: "14px",
-      fontWeight: "700",
-    });
-    page.querySelector(".sheet-header").after(hint);
-  }
   const list = page.querySelector("[data-problems]");
   list.style.setProperty("--cols", settings.columns);
-  list.style.setProperty("--row-gap", settings.count > 24 ? "4mm" : "7mm");
-  list.style.setProperty("--problem-min", settings.count > 24 ? "24mm" : "31mm");
+  list.style.setProperty("--row-gap", "7mm");
+  list.style.setProperty("--problem-min", "36mm");
   problems.forEach((problem) => {
     const item = document.createElement("li");
     item.className = "problem";
@@ -240,7 +176,7 @@ function renderPage(kind, showAnswer) {
 function render() {
   if (!problems.length) {
     const settings = getSettings();
-    problems = Array.from({ length: settings.count }, () => makeProblem(settings));
+    problems = shuffle(variants).slice(0, settings.count).map(makeProblem);
   }
   els.pages.replaceChildren(renderPage("もんだい", false), renderPage("こたえ", true));
   els.pageCount.textContent = "2枚";
@@ -311,7 +247,7 @@ async function copyShareUrl() {
 
 function bindEvents() {
   [els.studentName, els.worksheetDate, els.worksheetTitle].forEach((control) => control.addEventListener("input", render));
-  [els.difficulty, els.problemCount, els.columns].forEach((control) => control.addEventListener("change", generateProblems));
+  [els.problemCount, els.columns].forEach((control) => control.addEventListener("change", generateProblems));
   els.problemCount.addEventListener("input", () => {
     if (els.problemCount.value === "") return;
     els.problemCountPreset.value = "";
