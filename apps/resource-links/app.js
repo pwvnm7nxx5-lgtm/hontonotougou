@@ -146,7 +146,7 @@ function matchesSite(site) {
   const query = normalizeText(elements.searchInput.value);
   const selectedGrade = elements.gradeFilter.value;
   const selectedSubject = elements.subjectFilter.value;
-  const favoriteMatches = !elements.favoriteOnly.checked || favorites.has(site.id);
+  const favoriteMatches = !elements.favoriteOnly.checked || favorites.has(favoriteId("site", site.id));
   const gradeMatches = selectedGrade === "all" || (site.grades || []).includes(selectedGrade);
   const subjectMatches = selectedSubject === "all" || (site.subjects || []).includes(selectedSubject);
   const queryMatches = !query || normalizeText(searchableText(site)).includes(query);
