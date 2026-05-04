@@ -2,7 +2,7 @@ const APP = {
   id: "shape-print-grade2",
   title: "2年生 図形 名前プリント",
   accent: "#7c3aed",
-  stateVersion: 2,
+  stateVersion: 3,
   defaultCount: 10,
   defaultCols: 2,
 };
@@ -27,7 +27,7 @@ const els = {
 
 const stateStorageKey = `${APP.id}-state`;
 const problemCountMin = 1;
-const problemCountMax = 36;
+const problemCountMax = 15;
 let statusTimer;
 let problems = [];
 
@@ -80,7 +80,42 @@ function pick(items) {
   return items[rand(0, items.length - 1)];
 }
 
-function shapeSvg(shape) {
+const shapeNames = {
+  triangle: "三角形",
+  quadrilateral: "四角形",
+  rectangle: "長方形",
+  square: "正方形",
+  rightTriangle: "直角三角形",
+};
+
+const shapeVariants = [
+  { shape: "triangle", rotate: 0 },
+  { shape: "triangle", rotate: 90 },
+  { shape: "triangle", rotate: 180 },
+  { shape: "triangle", rotate: 270 },
+  { shape: "quadrilateral", rotate: 0 },
+  { shape: "quadrilateral", rotate: 90 },
+  { shape: "quadrilateral", rotate: 180 },
+  { shape: "quadrilateral", rotate: 270 },
+  { shape: "rectangle", rotate: 0 },
+  { shape: "rectangle", rotate: 90 },
+  { shape: "square", rotate: 0 },
+  { shape: "rightTriangle", rotate: 0 },
+  { shape: "rightTriangle", rotate: 90 },
+  { shape: "rightTriangle", rotate: 180 },
+  { shape: "rightTriangle", rotate: 270 },
+];
+
+function shuffle(items) {
+  const result = [...items];
+  for (let i = result.length - 1; i > 0; i -= 1) {
+    const j = rand(0, i);
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+function shapeSvg(variant) {
   const paths = {
     triangle: "M38 118 L86 32 L130 118 Z",
     quadrilateral: "M44 44 H124 L112 116 H32 Z",
@@ -88,40 +123,25 @@ function shapeSvg(shape) {
     square: "M46 38 H122 V114 H46 Z",
     rightTriangle: "M42 116 H126 V40 Z",
   };
-  const labels = {
-    triangle: "三角形",
-    quadrilateral: "四角形",
-    rectangle: "長方形",
-    square: "正方形",
-    rightTriangle: "直角三角形",
-  };
+  const { shape, rotate } = variant;
   const rightAngle = shape === "rightTriangle"
     ? `<path d="M106 116 V96 H126" fill="none" stroke="#344054" stroke-width="2"/>`
     : "";
-  return `<svg viewBox="0 0 160 160" width="150" height="150" aria-label="${labels[shape]}"><path class="solid-shape" d="${paths[shape]}"/>${rightAngle}</svg>`;
+  return `<svg viewBox="0 0 160 160" width="150" height="150" aria-label="${shapeNames[shape]}"><g transform="rotate(${rotate} 80 80)"><path class="solid-shape" d="${paths[shape]}"/>${rightAngle}</g></svg>`;
 }
 
-function makeProblem() {
-  const shapes = ["triangle", "quadrilateral", "rectangle", "square", "rightTriangle"];
-  const shape = pick(shapes);
-  const names = {
-    triangle: "三角形",
-    quadrilateral: "四角形",
-    rectangle: "長方形",
-    square: "正方形",
-    rightTriangle: "直角三角形",
-  };
+function makeProblem(variant) {
   return {
     prompt: "この形の名前を書きましょう。",
-    answer: names[shape],
-    visual: shapeSvg(shape),
+    answer: shapeNames[variant.shape],
+    visual: shapeSvg(variant),
   };
 }
 
 function generateProblems(options = {}) {
   if (options.normalizeCount !== false) els.problemCount.value = String(getProblemCount());
   const settings = getSettings();
-  problems = Array.from({ length: settings.count }, () => makeProblem());
+  problems = shuffle(shapeVariants).slice(0, settings.count).map(makeProblem);
   render();
   setStatus("問題を作り直しました。");
 }
@@ -155,8 +175,8 @@ function renderPage(kind, showAnswer) {
   if (showAnswer) kindLabel.classList.add("answer");
   const list = page.querySelector("[data-problems]");
   list.style.setProperty("--cols", settings.columns);
-  list.style.setProperty("--row-gap", settings.count > 24 ? "4mm" : "7mm");
-  list.style.setProperty("--problem-min", settings.count > 24 ? "28mm" : "36mm");
+  list.style.setProperty("--row-gap", "7mm");
+  list.style.setProperty("--problem-min", "36mm");
   problems.forEach((problem) => {
     const item = document.createElement("li");
     item.className = "problem";
@@ -168,7 +188,8 @@ function renderPage(kind, showAnswer) {
 
 function render() {
   if (!problems.length) {
-    problems = Array.from({ length: getSettings().count }, () => makeProblem());
+    const settings = getSettings();
+    problems = shuffle(shapeVariants).slice(0, settings.count).map(makeProblem);
   }
   els.pages.replaceChildren(renderPage("問題", false), renderPage("答え", true));
   els.pageCount.textContent = "2枚";

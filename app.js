@@ -69,7 +69,7 @@ function matchesGrade(app) {
     return true;
   }
   const grades = getAppGrades(app);
-  return grades.includes(selectedGrade) || grades.includes("all");
+  return grades.includes(selectedGrade);
 }
 
 function matchesApp(app, query) {

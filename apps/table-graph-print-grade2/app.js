@@ -2,6 +2,7 @@
   id: "table-graph-print-grade2",
   title: "2年生 表とグラフ",
   accent: "#c2410c",
+  stateVersion: 2,
   defaultType: "table",
   defaultDifficulty: "normal",
   defaultCount: 10,
@@ -112,15 +113,24 @@ function beakerSvg(ml, showLevel = true) {
   const water = showLevel ? `<rect x="34" y="${y}" width="45" height="${h}" fill="#93c5fd" opacity=".8"/>` : "";
   return `<svg viewBox="0 0 132 128" width="130" height="126"><path d="M30 16h54l-6 98a10 10 0 0 1-10 9H46a10 10 0 0 1-10-9z" fill="#fff" stroke="#344054" stroke-width="3"/>${water}${marks}<text x="104" y="20" font-size="9">mL</text></svg>`;
 }
-function barGraphSvg(labels, values, showBars = true) {
-  const max = Math.max(5, ...values);
+function barGraphSvg(labels, values, showBars = true, difficulty = "normal") {
+  const axisMax = difficulty === "easy" ? 5 : 10;
+  const tickStep = difficulty === "easy" ? 1 : 2;
+  const graphTop = 20;
+  const graphBottom = 100;
+  const graphHeight = graphBottom - graphTop;
   const bars = values.map((v, i) => {
     const x = 38 + i * 34;
-    const h = 80 * v / max;
-    return `${showBars ? `<rect x="${x}" y="${100 - h}" width="22" height="${h}" fill="#f97316"/>` : `<rect x="${x}" y="20" width="22" height="80" fill="transparent" stroke="#cfd8e3" stroke-dasharray="3 3"/>`}<text x="${x + 11}" y="116" font-size="10" text-anchor="middle">${labels[i]}</text>`;
+    const h = graphHeight * v / axisMax;
+    return `${showBars ? `<rect x="${x}" y="${graphBottom - h}" width="22" height="${h}" fill="#f97316"/>` : `<rect x="${x}" y="${graphTop}" width="22" height="${graphHeight}" fill="transparent" stroke="#cfd8e3" stroke-dasharray="3 3"/>`}<text x="${x + 11}" y="116" font-size="10" text-anchor="middle">${labels[i]}</text>`;
   }).join("");
-  const grid = Array.from({ length: 6 }, (_, i) => `<line x1="28" y1="${20 + i * 16}" x2="176" y2="${20 + i * 16}" stroke="#d8e0e8"/><text x="22" y="${24 + i * 16}" font-size="8" text-anchor="end">${Math.round(max - max * i / 5)}</text>`).join("");
-  return `<svg class="graph" viewBox="0 0 190 125" width="190" height="125"><line x1="28" y1="100" x2="180" y2="100" stroke="#344054"/><line x1="28" y1="18" x2="28" y2="100" stroke="#344054"/>${grid}${bars}</svg>`;
+  const tickCount = axisMax / tickStep;
+  const grid = Array.from({ length: tickCount + 1 }, (_, i) => {
+    const value = axisMax - i * tickStep;
+    const y = graphTop + graphHeight * i / tickCount;
+    return `<line x1="28" y1="${y}" x2="176" y2="${y}" stroke="#d8e0e8"/><text x="22" y="${y + 4}" font-size="8" text-anchor="end">${value}</text>`;
+  }).join("");
+  return `<svg class="graph" viewBox="0 0 190 125" width="190" height="125"><line x1="28" y1="${graphBottom}" x2="180" y2="${graphBottom}" stroke="#344054"/><line x1="28" y1="18" x2="28" y2="${graphBottom}" stroke="#344054"/>${grid}${bars}</svg>`;
 }
 function shapeSvg(shape, mode) {
   const grid = Array.from({ length: 8 }, (_, i) => `<line class="grid-line" x1="${16 + i * 18}" y1="16" x2="${16 + i * 18}" y2="142"/><line class="grid-line" x1="16" y1="${16 + i * 18}" x2="142" y2="${16 + i * 18}"/>`).join("");
@@ -191,9 +201,9 @@ function makeGraphProblem(settings) {
   const labels = ["りんご", "みかん", "ぶどう", "なし"];
   const values = labels.map(() => rand(1, settings.difficulty === "easy" ? 5 : 9));
   const i = rand(0, labels.length - 1);
-  if (settings.type === "makeGraph") return { prompt: "表を見て、棒グラフを完成させましょう。", answer: labels.map((l, idx) => `${l}:${values[idx]}`).join("、"), visual: makeTable(labels, values) + barGraphSvg(labels, values, false), answerVisual: makeTable(labels, values) + barGraphSvg(labels, values, true) };
+  if (settings.type === "makeGraph") return { prompt: "表を見て、棒グラフを完成させましょう。", answer: labels.map((l, idx) => `${l}:${values[idx]}`).join("、"), visual: makeTable(labels, values) + barGraphSvg(labels, values, false, settings.difficulty), answerVisual: makeTable(labels, values) + barGraphSvg(labels, values, true, settings.difficulty) };
   if (settings.type === "table") return { prompt: `${labels[i]} はいくつですか。`, answer: `${values[i]}`, visual: makeTable(labels, values) };
-  return { prompt: `${labels[i]} はいくつですか。`, answer: `${values[i]}`, visual: barGraphSvg(labels, values, true) };
+  return { prompt: `${labels[i]} はいくつですか。`, answer: `${values[i]}`, visual: barGraphSvg(labels, values, true, settings.difficulty) };
 }
 function makeTable(labels, values) {
   const rows = labels.map((label, i) => `<tr><th>${label}</th><td>${values[i]}</td></tr>`).join("");
@@ -248,7 +258,7 @@ function render() {
   els.pageCount.textContent = "2枚";
   saveState();
 }
-function getShareState() { return { settings: getSettings(), problems }; }
+function getShareState() { return { version: APP.stateVersion, settings: getSettings(), problems }; }
 function encodeState(state) {
   const bytes = new TextEncoder().encode(JSON.stringify(state));
   let binary = "";
@@ -268,14 +278,14 @@ function loadInitialState() {
   const hash = window.location.hash.replace(/^#data=/, "");
   if (hash) {
     const decoded = decodeState(hash);
-    if (decoded?.settings && Array.isArray(decoded.problems)) { applySettings(decoded.settings); problems = decoded.problems; return; }
+    if (decoded?.settings) { applySettings(decoded.settings); problems = decoded.version === APP.stateVersion && Array.isArray(decoded.problems) ? decoded.problems : []; return; }
   }
   try {
     const saved = localStorage.getItem(stateStorageKey);
     if (saved) {
       const parsed = JSON.parse(saved);
       applySettings(parsed.settings);
-      if (Array.isArray(parsed.problems)) problems = parsed.problems;
+      if (parsed.version === APP.stateVersion && Array.isArray(parsed.problems)) problems = parsed.problems;
     }
   } catch {}
 }
