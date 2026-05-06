@@ -406,6 +406,11 @@ h1 {
   color: #245f3b;
 }
 
+.dev-status {
+  background: #fff7ed;
+  color: #9a3412;
+}
+
 .tag-row span {
   border: 1px solid #d6e0e6;
   color: var(--muted);

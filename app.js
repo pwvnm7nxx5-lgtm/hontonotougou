@@ -13,6 +13,11 @@ const bookmarkStorageKey = "special-support-app-bookmark-folders-v1";
 const updateHistory = [
   {
     date: "5月7日",
+    title: "3年生プリント作成アプリを開発中で追加",
+    isNew: true,
+  },
+  {
+    date: "5月7日",
     title: "時計プリントの問題数と配置を調整",
     isNew: true,
   },
@@ -304,7 +309,7 @@ function makeAppCard(app) {
   meta.append(category);
 
   const status = document.createElement("span");
-  status.className = "ready";
+  status.className = app.status === "ready" ? "ready" : "ready dev-status";
   status.textContent = app.status === "ready" ? "利用可" : app.status || "";
   if (status.textContent) {
     meta.append(status);
