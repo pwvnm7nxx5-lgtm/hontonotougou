@@ -1,5 +1,12 @@
 const els = {
   sourceText: document.querySelector("#sourceText"),
+  addReadings: document.querySelector("#addReadings"),
+  readingPanel: document.querySelector("#readingPanel"),
+  readingText: document.querySelector("#readingText"),
+  extractReadingsBtn: document.querySelector("#extractReadingsBtn"),
+  rubyFontSize: document.querySelector("#rubyFontSize"),
+  rubyOpacity: document.querySelector("#rubyOpacity"),
+  rubySpacing: document.querySelector("#rubySpacing"),
   studentName: document.querySelector("#studentName"),
   worksheetDate: document.querySelector("#worksheetDate"),
   cols: document.querySelector("#cols"),
@@ -13,6 +20,8 @@ const els = {
   opacity: document.querySelector("#opacity"),
   stripSpaces: document.querySelector("#stripSpaces"),
   lineBreakColumn: document.querySelector("#lineBreakColumn"),
+  fillExtraKanji: document.querySelector("#fillExtraKanji"),
+  extraBlankCount: document.querySelector("#extraBlankCount"),
   pages: document.querySelector("#pages"),
   pageTemplate: document.querySelector("#pageTemplate"),
   pageCount: document.querySelector("#pageCount"),
@@ -40,7 +49,89 @@ const fontStacks = {
   kyokasho: '"UD Digi Kyokasho N-R", "UD デジタル 教科書体 N-R", "BIZ UDPGothic", "Yu Gothic", sans-serif',
   gothic: '"BIZ UDPGothic", "Yu Gothic", "Meiryo", "Noto Sans JP", sans-serif',
   mincho: '"Yu Mincho", "BIZ UDMincho", "MS Mincho", "Noto Serif JP", serif',
-  maru: '"Yu Gothic", "Hiragino Maru Gothic ProN", "Meiryo", "Noto Sans JP", sans-serif',
+};
+const wordReadings = [
+  ["木曜日", ["もく", "よう", "び"]],
+  ["日曜日", ["にち", "よう", "び"]],
+  ["月曜日", ["げつ", "よう", "び"]],
+  ["火曜日", ["か", "よう", "び"]],
+  ["水曜日", ["すい", "よう", "び"]],
+  ["金曜日", ["きん", "よう", "び"]],
+  ["土曜日", ["ど", "よう", "び"]],
+  ["大好き", ["だい", "す"]],
+  ["大き", ["おお"]],
+  ["大陸", ["たい", "りく"]],
+  ["横断", ["おう", "だん"]],
+  ["九州", ["きゅう", "しゅう"]],
+  ["中央", ["ちゅう", "おう"]],
+  ["早起", ["はや", "お"]],
+  ["学習", ["がく", "しゅう"]],
+  ["練習", ["れん", "しゅう"]],
+];
+const kanjiReadingFallback = {
+  一: "いち",
+  二: "に",
+  三: "さん",
+  四: "よん",
+  五: "ご",
+  六: "ろく",
+  七: "なな",
+  八: "はち",
+  九: "きゅう",
+  十: "じゅう",
+  百: "ひゃく",
+  千: "せん",
+  上: "うえ",
+  下: "した",
+  左: "ひだり",
+  右: "みぎ",
+  中: "なか",
+  大: "だい",
+  小: "しょう",
+  山: "やま",
+  川: "かわ",
+  田: "た",
+  日: "にち",
+  月: "つき",
+  火: "ひ",
+  水: "みず",
+  木: "き",
+  金: "きん",
+  土: "つち",
+  人: "ひと",
+  子: "こ",
+  女: "おんな",
+  男: "おとこ",
+  目: "め",
+  口: "くち",
+  耳: "みみ",
+  手: "て",
+  足: "あし",
+  花: "はな",
+  草: "くさ",
+  虫: "むし",
+  犬: "いぬ",
+  王: "おう",
+  玉: "たま",
+  空: "そら",
+  雨: "あめ",
+  糸: "いと",
+  車: "くるま",
+  学: "がく",
+  校: "こう",
+  先: "せん",
+  生: "せい",
+  年: "ねん",
+  時: "じ",
+  分: "ふん",
+  半: "はん",
+  曜: "よう",
+  好: "す",
+  陸: "りく",
+  横: "おう",
+  断: "だん",
+  練: "れん",
+  習: "しゅう",
 };
 
 function getDirection() {
@@ -73,31 +164,165 @@ function normalizeText(text, cols, rows) {
     source = source.replace(/\n+/g, "");
   }
 
-  const chars = [];
+  const cells = [];
   let position = 0;
+  let columnStart = 0;
+
+  function pushCell(char, practice = false) {
+    cells.push({ char, practice });
+    position += 1;
+  }
+
+  function fillColumnWithBlanks(practice = false) {
+    const remainder = position % rows;
+    if (remainder === 0) {
+      columnStart = position;
+      return;
+    }
+
+    const blanks = rows - remainder;
+    for (let index = 0; index < blanks; index += 1) {
+      pushCell("", practice);
+    }
+    columnStart = position;
+  }
+
+  function addPracticeToColumn() {
+    if (!els.fillExtraKanji.checked) {
+      return;
+    }
+
+    const remainder = position % rows;
+    if (remainder === 0) {
+      columnStart = position;
+      return;
+    }
+
+    const columnKanji = getUniqueKanji(cells.slice(columnStart, position).map((cell) => cell.char).join(""));
+    const blanksToBottom = rows - remainder;
+    const bottomBlanks = clampNumber(els.extraBlankCount.value, 0, rows - 1, 2);
+    const practiceSlots = Math.max(0, blanksToBottom - bottomBlanks);
+
+    for (let index = 0; index < practiceSlots; index += 1) {
+      pushCell(columnKanji.length ? columnKanji[index % columnKanji.length] : "", true);
+    }
+
+    fillColumnWithBlanks(true);
+  }
+
   for (const char of Array.from(source)) {
     if (char === columnBreak) {
-      const remainder = position % rows;
-      if (remainder !== 0) {
-        const blanks = rows - remainder;
-        for (let i = 0; i < blanks; i += 1) {
-          chars.push("");
-          position += 1;
-        }
-      }
+      fillColumnWithBlanks();
       continue;
     }
 
-    chars.push(char);
-    position += 1;
+    pushCell(char);
+    if (isSentenceEndChar(char)) {
+      addPracticeToColumn();
+    }
   }
 
   const perPage = cols * rows;
   const pages = [];
-  for (let i = 0; i < Math.max(chars.length, 1); i += perPage) {
-    pages.push(chars.slice(i, i + perPage));
+  for (let i = 0; i < Math.max(cells.length, 1); i += perPage) {
+    pages.push(cells.slice(i, i + perPage));
   }
   return pages;
+}
+
+function isKanji(char) {
+  return /[\u3400-\u9fff々]/u.test(char);
+}
+
+function getUniqueKanji(text) {
+  return [...new Set(Array.from(text).filter(isKanji))];
+}
+
+function isSentenceEndChar(char) {
+  return ["\u3002", "\uff0e", ".", "\uff01", "!", "\uff1f", "?"].includes(char);
+}
+
+function parseReadingQueues() {
+  const queues = new Map();
+  els.readingText.value.split(/\n+/).forEach((line) => {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    const separatorIndex = trimmed.search(/[=\uff1d:\uff1a\s\u3000]/u);
+    const rawKanji = separatorIndex >= 0 ? trimmed.slice(0, separatorIndex) : trimmed;
+    const reading = separatorIndex >= 0
+      ? trimmed.slice(separatorIndex + 1).replace(/^[=\uff1d:\uff1a\s\u3000]+/u, "").trim()
+      : "";
+    const kanji = Array.from(rawKanji || "").find(isKanji);
+    if (kanji) {
+      if (!queues.has(kanji)) {
+        queues.set(kanji, []);
+      }
+      queues.get(kanji).push(reading);
+    }
+  });
+  return queues;
+}
+
+function makeReadingResolver() {
+  const queues = parseReadingQueues();
+  const used = new Map();
+
+  return (char) => {
+    const readings = queues.get(char);
+    if (!readings || !readings.length) {
+      return "";
+    }
+
+    if (readings.length === 1) {
+      return readings[0];
+    }
+
+    const index = used.get(char) || 0;
+    used.set(char, index + 1);
+    return readings[index] || "";
+  };
+}
+
+function makeAutoReadingLines(text) {
+  const chars = Array.from(text);
+  const readings = Array.from({ length: chars.length }, () => "");
+  let index = 0;
+
+  while (index < chars.length) {
+    const matched = wordReadings.find(([word]) => text.startsWith(word, index));
+    if (matched) {
+      const [word, wordReading] = matched;
+      const readingsForWord = [...wordReading];
+      Array.from(word).forEach((char, offset) => {
+        if (isKanji(char)) {
+          readings[index + offset] = readingsForWord.shift() || kanjiReadingFallback[char] || "";
+        }
+      });
+      index += Array.from(word).length;
+      continue;
+    }
+
+    const char = chars[index];
+    if (isKanji(char)) {
+      readings[index] = kanjiReadingFallback[char] || "";
+    }
+    index += 1;
+  }
+
+  return chars
+    .map((char, charIndex) => (isKanji(char) ? `${char}=${readings[charIndex] || ""}` : ""))
+    .filter(Boolean)
+    .join("\n");
+}
+
+function syncReadingPanel() {
+  if (els.addReadings.disabled) {
+    els.addReadings.checked = false;
+  }
+  els.readingPanel.hidden = !els.addReadings.checked;
 }
 
 function makeReadingMarks(cols, direction) {
@@ -108,6 +333,7 @@ function makeReadingMarks(cols, direction) {
 }
 
 function render() {
+  syncReadingPanel();
   const cols = clampNumber(els.cols.value, 6, 14, 10);
   const rows = clampNumber(els.rows.value, 8, 20, 14);
   const fontSize = clampNumber(els.fontSize.value, 18, 72, 34);
@@ -116,8 +342,12 @@ function render() {
   const fontWeight = clampNumber(els.fontWeight.value, 300, 700, 500);
   const letterSpacing = clampNumber(els.letterSpacing.value, -2, 6, 0);
   const opacity = clampNumber(els.opacity.value, 8, 45, 24) / 100;
+  const rubyFontSize = clampNumber(els.rubyFontSize.value, 5, 14, 7);
+  const rubyOpacity = clampNumber(els.rubyOpacity.value, 20, 100, 80) / 100;
+  const rubySpacing = clampNumber(els.rubySpacing.value, 0, 4, 0);
   const direction = getDirection();
   const pageData = normalizeText(els.sourceText.value, cols, rows);
+  const resolveReading = els.addReadings.checked ? makeReadingResolver() : () => "";
   const pageTotal = pageData.length;
   const layout = calculateSheetLayout(cols, rows);
 
@@ -135,6 +365,9 @@ function render() {
   document.documentElement.style.setProperty("--trace-font-weight", fontWeight);
   document.documentElement.style.setProperty("--letter-spacing", `${letterSpacing}px`);
   document.documentElement.style.setProperty("--trace-opacity", opacity.toFixed(2));
+  document.documentElement.style.setProperty("--ruby-font-size", `${rubyFontSize}px`);
+  document.documentElement.style.setProperty("--ruby-opacity", rubyOpacity.toFixed(2));
+  document.documentElement.style.setProperty("--ruby-spacing", `${rubySpacing}px`);
 
   els.pages.textContent = "";
   pageData.forEach((chars, pageIndex) => {
@@ -153,18 +386,23 @@ function render() {
     });
 
     const grid = page.querySelector("[data-grid]");
-    const cells = Array.from({ length: cols * rows }, () => "");
-    chars.forEach((char, index) => {
+    const cells = Array.from({ length: cols * rows }, () => ({ char: "", practice: false, reading: "" }));
+    chars.forEach((sourceCell, index) => {
       const col = Math.floor(index / rows);
       const row = index % rows;
       const visualCol = direction === "rtl" ? cols - 1 - col : col;
-      cells[row * cols + visualCol] = char;
+      const char = sourceCell.char || "";
+      cells[row * cols + visualCol] = {
+        ...sourceCell,
+        reading: els.addReadings.checked && !sourceCell.practice && isKanji(char) ? resolveReading(char) : "",
+      };
     });
 
     for (let row = 0; row < rows; row += 1) {
       for (let col = 0; col < cols; col += 1) {
-        grid.append(createTextCell(cells[row * cols + col]));
-        grid.append(createRubyCell());
+        const cell = cells[row * cols + col];
+        grid.append(createTextCell(cell.char));
+        grid.append(createRubyCell(cell.reading));
       }
     }
 
@@ -219,10 +457,30 @@ function createTextCell(char) {
   return cell;
 }
 
-function createRubyCell() {
+function createRubyCell(reading = "") {
   const cell = document.createElement("div");
   cell.className = "ruby-cell";
+  if (reading) {
+    const span = document.createElement("span");
+    span.className = "ruby-text";
+    span.textContent = reading;
+    cell.append(span);
+  }
   return cell;
+}
+
+function extractReadingsFromText() {
+  if (els.addReadings.disabled) {
+    syncReadingPanel();
+    setStatus("読み仮名は現在利用できません。");
+    return;
+  }
+  els.addReadings.checked = true;
+  syncReadingPanel();
+
+  els.readingText.value = makeAutoReadingLines(els.sourceText.value);
+  render();
+  setStatus("本文中の漢字を読み仮名欄に出しました。");
 }
 
 function clampNumber(value, min, max, fallback) {
@@ -236,6 +494,8 @@ function clampNumber(value, min, max, fallback) {
 function getState() {
   return {
     text: els.sourceText.value,
+    addReadings: !els.addReadings.disabled && els.addReadings.checked,
+    readings: els.readingText.value,
     name: els.studentName.value,
     date: els.worksheetDate.value,
     cols: els.cols.value,
@@ -247,8 +507,13 @@ function getState() {
     fontWeight: els.fontWeight.value,
     letterSpacing: els.letterSpacing.value,
     opacity: els.opacity.value,
+    rubyFontSize: els.rubyFontSize.value,
+    rubyOpacity: els.rubyOpacity.value,
+    rubySpacing: els.rubySpacing.value,
     stripSpaces: els.stripSpaces.checked,
     lineBreakColumn: els.lineBreakColumn.checked,
+    fillExtraKanji: els.fillExtraKanji.checked,
+    extraBlankCount: els.extraBlankCount.value,
     direction: getDirection(),
   };
 }
@@ -264,8 +529,13 @@ function getTemplateSettings() {
     fontWeight: els.fontWeight.value,
     letterSpacing: els.letterSpacing.value,
     opacity: els.opacity.value,
+    rubyFontSize: els.rubyFontSize.value,
+    rubyOpacity: els.rubyOpacity.value,
+    rubySpacing: els.rubySpacing.value,
     stripSpaces: els.stripSpaces.checked,
     lineBreakColumn: els.lineBreakColumn.checked,
+    fillExtraKanji: els.fillExtraKanji.checked,
+    extraBlankCount: els.extraBlankCount.value,
     direction: getDirection(),
   };
 }
@@ -277,6 +547,7 @@ function applyState(state) {
 
   const assignments = [
     ["sourceText", "text"],
+    ["readingText", "readings"],
     ["studentName", "name"],
     ["worksheetDate", "date"],
     ["cols", "cols"],
@@ -288,6 +559,10 @@ function applyState(state) {
     ["fontWeight", "fontWeight"],
     ["letterSpacing", "letterSpacing"],
     ["opacity", "opacity"],
+    ["rubyFontSize", "rubyFontSize"],
+    ["rubyOpacity", "rubyOpacity"],
+    ["rubySpacing", "rubySpacing"],
+    ["extraBlankCount", "extraBlankCount"],
   ];
   assignments.forEach(([elementKey, stateKey]) => {
     if (state[stateKey] !== undefined) {
@@ -299,11 +574,21 @@ function applyState(state) {
     els.fontWeight.value = "700";
   }
 
+  if (state.fontFamily === "maru") {
+    els.fontFamily.value = "gothic";
+  }
+
   if (state.stripSpaces !== undefined) {
     els.stripSpaces.checked = Boolean(state.stripSpaces);
   }
   if (state.lineBreakColumn !== undefined) {
     els.lineBreakColumn.checked = Boolean(state.lineBreakColumn);
+  }
+  if (state.addReadings !== undefined && !els.addReadings.disabled) {
+    els.addReadings.checked = Boolean(state.addReadings);
+  }
+  if (state.fillExtraKanji !== undefined) {
+    els.fillExtraKanji.checked = Boolean(state.fillExtraKanji);
   }
   if (state.direction) {
     const direction = document.querySelector(`input[name="direction"][value="${state.direction}"]`);
@@ -460,6 +745,8 @@ async function copyShareUrl() {
 function bindEvents() {
   const controls = [
     els.sourceText,
+    els.addReadings,
+    els.readingText,
     els.studentName,
     els.worksheetDate,
     els.cols,
@@ -471,8 +758,13 @@ function bindEvents() {
     els.fontWeight,
     els.letterSpacing,
     els.opacity,
+    els.rubyFontSize,
+    els.rubyOpacity,
+    els.rubySpacing,
     els.stripSpaces,
     els.lineBreakColumn,
+    els.fillExtraKanji,
+    els.extraBlankCount,
     ...document.querySelectorAll('input[name="direction"]'),
   ];
 
@@ -487,6 +779,13 @@ function bindEvents() {
   });
 
   els.copyLinkBtn.addEventListener("click", copyShareUrl);
+  els.extractReadingsBtn.addEventListener("click", extractReadingsFromText);
+  els.addReadings.addEventListener("change", () => {
+    if (els.addReadings.checked && !els.readingText.value.trim()) {
+      els.readingText.value = makeAutoReadingLines(els.sourceText.value);
+    }
+    render();
+  });
   els.saveTemplateBtn.addEventListener("click", saveTemplate);
   els.applyTemplateBtn.addEventListener("click", applyTemplate);
   els.deleteTemplateBtn.addEventListener("click", deleteTemplate);
