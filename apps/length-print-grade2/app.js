@@ -7,6 +7,7 @@
   problemCount: document.querySelector("#problemCount"),
   problemCountPreset: document.querySelector("#problemCountPreset"),
   columns: document.querySelector("#columns"),
+  showHint: document.querySelector("#showHint"),
   printBtn: document.querySelector("#printBtn"),
   regenerateBtn: document.querySelector("#regenerateBtn"),
   copyLinkBtn: document.querySelector("#copyLinkBtn"),
@@ -57,6 +58,7 @@ function getSettings() {
     difficulty: clampChoice(els.difficulty.value, ["easy", "normal", "hard"], "easy"),
     count: getProblemCount(),
     columns: Number.parseInt(clampChoice(els.columns.value, ["1", "2", "3"], "2"), 10),
+    showHint: els.showHint.checked,
   };
 }
 
@@ -72,6 +74,7 @@ function applySettings(settings) {
   els.problemCount.value = String(clampNumber(settings.count, problemCountMin, problemCountMax, 12));
   els.problemCountPreset.value = "";
   els.columns.value = clampChoice(settings.columns, ["1", "2", "3"], "2");
+  els.showHint.checked = Boolean(settings.showHint);
 }
 
 function setStatus(message) {
@@ -384,7 +387,7 @@ function renderPage(kind, showAnswer) {
   if (showAnswer) {
     kindLabel.classList.add("answer");
   }
-  if (!showAnswer && settings.type === "conversion" && settings.difficulty === "easy") {
+  if (!showAnswer && settings.showHint) {
     const hint = document.createElement("div");
     hint.className = "page-hint";
     hint.textContent = "ヒント: 1cm = 10mm、1m = 100cm";
@@ -506,6 +509,7 @@ function bindEvents() {
     control.addEventListener("change", generateProblems);
   });
   els.columns.addEventListener("change", render);
+  els.showHint.addEventListener("change", render);
   els.problemCount.addEventListener("change", generateProblems);
   els.problemCount.addEventListener("input", () => {
     if (els.problemCount.value === "") {
