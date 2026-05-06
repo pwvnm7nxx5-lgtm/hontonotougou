@@ -11,6 +11,8 @@
   --row-gap: 7mm;
   --problem-min: 35mm;
   --problem-font: 18px;
+  --visual-min: 24mm;
+  --clock-width: 132px;
 }
 
 * {
@@ -326,12 +328,16 @@ button {
 .visual {
   display: grid;
   place-items: center;
-  min-height: 24mm;
+  min-height: var(--visual-min);
 }
 
 .visual svg {
   max-width: 100%;
   height: auto;
+}
+
+.visual .clock {
+  width: var(--clock-width);
 }
 
 .answer-line {

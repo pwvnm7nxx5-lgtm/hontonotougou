@@ -3,7 +3,7 @@ const APP = {
   title: "1年生 とけいプリント",
   accent: "#2563eb",
   stateVersion: 4,
-  defaultCount: 8,
+  defaultCount: 6,
   defaultCols: 2,
 };
 
@@ -190,8 +190,10 @@ function renderPage(kind, showAnswer) {
   if (showAnswer) kindLabel.classList.add("answer");
   const list = page.querySelector("[data-problems]");
   list.style.setProperty("--cols", settings.columns);
-  list.style.setProperty("--row-gap", settings.count > 12 ? "4mm" : "7mm");
-  list.style.setProperty("--problem-min", settings.count > 12 ? "30mm" : "39mm");
+  list.style.setProperty("--row-gap", settings.count <= 6 ? "10mm" : settings.count > 12 ? "4mm" : "7mm");
+  list.style.setProperty("--problem-min", settings.count <= 6 ? "57mm" : settings.count > 12 ? "30mm" : "39mm");
+  list.style.setProperty("--visual-min", settings.count <= 6 ? "38mm" : "24mm");
+  list.style.setProperty("--clock-width", settings.count <= 6 ? "150px" : "132px");
   problems.forEach((problem) => {
     const item = document.createElement("li");
     item.className = "problem";
