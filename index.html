@@ -15,12 +15,21 @@
         </div>
         <div class="top-actions">
           <a class="resource-shortcut" href="apps/resource-links/index.html">外部教材を探す</a>
+          <button id="updatesToggle" class="updates-toggle" type="button" aria-expanded="false" aria-controls="updatesPanel">更新履歴</button>
           <div class="status-pill">
             <span id="appCount">0</span>
             <span>件</span>
           </div>
         </div>
       </header>
+
+      <aside id="updatesPanel" class="updates-panel" aria-label="更新履歴" hidden>
+        <div class="updates-head">
+          <p class="eyebrow">News</p>
+          <h2>更新履歴</h2>
+        </div>
+        <ol id="updateList" class="update-list"></ol>
+      </aside>
 
       <section class="toolbar" aria-label="アプリ検索">
         <label class="search-field">
@@ -32,9 +41,48 @@
           <div class="filter-line">
             <div id="categoryFilters" class="filter-row" aria-label="カテゴリ"></div>
             <button id="favoriteFilter" class="favorite-filter" type="button" aria-pressed="false">お気に入り</button>
+            <button id="bookmarkPanelToggle" class="bookmark-filter" type="button" aria-expanded="false" aria-controls="bookmarkPanel">ブックマーク</button>
           </div>
         </div>
       </section>
+
+      <aside id="bookmarkPanel" class="bookmark-panel" aria-label="ブックマーク管理" hidden>
+        <div class="bookmark-panel-head">
+          <div>
+            <p class="eyebrow">Bookmark</p>
+            <h2>ブックマーク</h2>
+          </div>
+        </div>
+        <div class="bookmark-controls">
+          <label class="bookmark-field">
+            <span>フォルダ</span>
+            <select id="bookmarkFolderSelect" aria-label="ブックマークフォルダ">
+              <option value="">フォルダなし</option>
+            </select>
+          </label>
+          <label class="bookmark-field">
+            <span>新しいフォルダ</span>
+            <input id="bookmarkFolderName" type="text" autocomplete="off" placeholder="例: 国語で使う" aria-label="新しいブックマークフォルダ名" />
+          </label>
+          <div class="bookmark-panel-actions">
+            <button id="createBookmarkFolder" class="folder-button" type="button">フォルダ作成</button>
+            <button id="deleteBookmarkFolder" class="folder-button folder-delete" type="button">選択フォルダを削除</button>
+          </div>
+        </div>
+      </aside>
+
+      <div id="bookmarkChooser" class="bookmark-chooser" role="dialog" aria-modal="false" aria-labelledby="bookmarkChooserTitle" hidden>
+        <div class="bookmark-chooser-head">
+          <h2 id="bookmarkChooserTitle">保存先を選ぶ</h2>
+          <button id="bookmarkChooserClose" class="chooser-close" type="button" aria-label="閉じる">×</button>
+        </div>
+        <p id="bookmarkChooserApp" class="chooser-target"></p>
+        <div class="chooser-folder-list" id="bookmarkChooserFolders"></div>
+        <div class="chooser-create">
+          <input id="bookmarkChooserName" type="text" autocomplete="off" placeholder="新しいフォルダ名" aria-label="新しいブックマークフォルダ名" />
+          <button id="bookmarkChooserCreate" class="folder-button" type="button">作って保存</button>
+        </div>
+      </div>
 
       <section id="appGrid" class="app-grid" aria-label="アプリ一覧"></section>
       <p id="emptyState" class="empty-state" hidden>該当するアプリはありません。</p>
