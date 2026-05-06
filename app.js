@@ -13,6 +13,11 @@ const bookmarkStorageKey = "special-support-app-bookmark-folders-v1";
 const updateHistory = [
   {
     date: "5月6日",
+    title: "漢字プリントの入口と練習欄を整理",
+    isNew: true,
+  },
+  {
+    date: "5月6日",
     title: "3年生の外部教材リンクを追加",
     isNew: true,
   },

@@ -19,6 +19,9 @@
   --trace-font-family: "UD Digi Kyokasho N-R", "UD デジタル 教科書体 N-R", "BIZ UDPGothic", "Yu Gothic", sans-serif;
   --trace-font-weight: 500;
   --letter-spacing: 0px;
+  --ruby-font-size: 7px;
+  --ruby-opacity: 0.8;
+  --ruby-spacing: 0px;
 }
 
 * {
@@ -107,6 +110,61 @@ textarea {
   white-space: nowrap;
 }
 
+.control-section {
+  margin: 0 0 16px;
+  padding: 12px;
+  border: 1px solid #d6dde4;
+  border-radius: 8px;
+  background: #f8fbfd;
+}
+
+.control-section h2 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  letter-spacing: 0;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.section-heading h2 {
+  margin: 0;
+}
+
+.disabled-badge {
+  display: inline-grid;
+  place-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border: 1px solid #d4dbe3;
+  border-radius: 999px;
+  background: #eef2f6;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.disabled-option {
+  color: #8a94a3;
+}
+
+.disabled-option input {
+  cursor: not-allowed;
+}
+
+.option-panel {
+  padding-top: 4px;
+}
+
+.option-panel[hidden] {
+  display: none;
+}
+
 .field,
 .range-field {
   display: grid;
@@ -139,6 +197,20 @@ textarea {
   padding: 12px;
   line-height: 1.7;
   resize: vertical;
+}
+
+#readingText {
+  min-height: 112px;
+}
+
+.sub-actions {
+  display: grid;
+  margin: -4px 0 14px;
+}
+
+.reading-settings,
+.extra-settings {
+  margin-bottom: 14px;
 }
 
 input[type="text"],
@@ -227,20 +299,6 @@ input[type="range"] {
   background: #e9f5fb;
   color: #0c5d85;
   font-weight: 700;
-}
-
-.template-box {
-  margin: 0 0 16px;
-  padding: 12px;
-  border: 1px solid #d6dde4;
-  border-radius: 8px;
-  background: #f8fbfd;
-}
-
-.template-box h2 {
-  margin: 0 0 10px;
-  font-size: 14px;
-  letter-spacing: 0;
 }
 
 .template-box .field {
@@ -434,6 +492,21 @@ button:hover {
   inset: 50% 0 auto 0;
   height: 0;
   border-top: 0.7px dotted var(--line-soft);
+}
+
+.ruby-text {
+  position: absolute;
+  inset: 1.4mm 0.2mm;
+  display: grid;
+  place-items: center;
+  color: rgba(83, 96, 108, var(--ruby-opacity));
+  font-size: var(--ruby-font-size);
+  font-weight: 700;
+  letter-spacing: var(--ruby-spacing);
+  line-height: 1.1;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  z-index: 2;
 }
 
 .small-kana .trace-char {
