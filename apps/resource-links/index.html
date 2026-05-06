@@ -56,6 +56,33 @@
           <label><input id="favoriteOnly" type="checkbox"> お気に入りだけ</label>
         </div>
 
+        <button id="bookmarkPanelToggle" class="bookmark-panel-toggle" type="button" aria-expanded="false" aria-controls="bookmarkPanel">ブックマーク</button>
+
+        <aside id="bookmarkPanel" class="bookmark-panel" aria-label="ブックマーク管理" hidden>
+          <div class="bookmark-panel-head">
+            <div>
+              <p class="eyebrow">Bookmark</p>
+              <h2>ブックマーク</h2>
+            </div>
+          </div>
+          <div class="bookmark-controls">
+            <label class="bookmark-field">
+              <span>フォルダ</span>
+              <select id="bookmarkFolderSelect" aria-label="ブックマークフォルダ">
+                <option value="">フォルダなし</option>
+              </select>
+            </label>
+            <label class="bookmark-field">
+              <span>新しいフォルダ</span>
+              <input id="bookmarkFolderName" type="text" autocomplete="off" placeholder="例: 3年生 算数" aria-label="新しいブックマークフォルダ名">
+            </label>
+            <div class="bookmark-panel-actions">
+              <button id="createBookmarkFolder" class="folder-button" type="button">フォルダ作成</button>
+              <button id="deleteBookmarkFolder" class="folder-button folder-delete" type="button">選択フォルダを削除</button>
+            </div>
+          </div>
+        </aside>
+
         <div class="summary">
           <span id="resultCount">0</span>
           <span>件を表示中</span>
@@ -80,7 +107,10 @@
 
     <template id="siteCardTemplate">
       <article class="site-card">
-        <button class="favorite-button" type="button"></button>
+        <div class="card-actions">
+          <button class="favorite-button" type="button"></button>
+          <button class="bookmark-button" type="button"><span class="bookmark-icon" aria-hidden="true"></span></button>
+        </div>
         <div class="site-head">
           <div class="site-mark" aria-hidden="true"></div>
           <div>
@@ -97,7 +127,10 @@
 
     <template id="printCardTemplate">
       <article class="site-card print-card">
-        <button class="favorite-button" type="button"></button>
+        <div class="card-actions">
+          <button class="favorite-button" type="button"></button>
+          <button class="bookmark-button" type="button"><span class="bookmark-icon" aria-hidden="true"></span></button>
+        </div>
         <div class="site-head">
           <div class="site-mark print-mark" aria-hidden="true"></div>
           <div>
@@ -111,6 +144,19 @@
         <a class="open-link" target="_blank" rel="noopener noreferrer">プリントのページを開く</a>
       </article>
     </template>
+
+    <div id="bookmarkChooser" class="bookmark-chooser" role="dialog" aria-modal="false" aria-labelledby="bookmarkChooserTitle" hidden>
+      <div class="bookmark-chooser-head">
+        <h2 id="bookmarkChooserTitle">保存先を選ぶ</h2>
+        <button id="bookmarkChooserClose" class="chooser-close" type="button" aria-label="閉じる">×</button>
+      </div>
+      <p id="bookmarkChooserItem" class="chooser-target"></p>
+      <div class="chooser-folder-list" id="bookmarkChooserFolders"></div>
+      <div class="chooser-create">
+        <input id="bookmarkChooserName" type="text" autocomplete="off" placeholder="新しいフォルダ名" aria-label="新しいブックマークフォルダ名">
+        <button id="bookmarkChooserCreate" class="folder-button" type="button">作って保存</button>
+      </div>
+    </div>
 
     <script src="sites.config.js"></script>
     <script src="grade2-resources.config.js"></script>
