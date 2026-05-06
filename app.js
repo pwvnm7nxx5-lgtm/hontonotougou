@@ -220,6 +220,9 @@ function renderApps() {
   const visibleApps = getVisibleApps();
   elements.appCount.textContent = String(visibleApps.length);
   elements.appGrid.replaceChildren(...visibleApps.map(makeAppCard));
+  elements.emptyState.textContent = selectedGrade === "3"
+    ? "3年生のプリント作成アプリは準備中です。外部教材は右上の「外部教材を探す」から確認できます。"
+    : "該当するアプリはありません。";
   elements.emptyState.hidden = visibleApps.length > 0;
 }
 

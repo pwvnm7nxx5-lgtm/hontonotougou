@@ -24,18 +24,6 @@
     accent: "#0f7b5f",
   },
   {
-    id: "resource-links",
-    title: "外部教材リンク",
-    description: "公開されているプリントサイトを、学年・教科・キーワードで探せます。",
-    category: "外部教材",
-    grades: ["all"],
-    tags: ["外部サイト", "教材", "プリント", "お気に入り"],
-    href: "apps/resource-links/index.html",
-    actionLabel: "教材サイトを探す",
-    status: "ready",
-    accent: "#334155",
-  },
-  {
     id: "math-print-grade1",
     title: "1年生 計算プリント",
     description: "小学1年生向けのたし算・ひき算プリントを自動作成して印刷できます。",
