@@ -18,6 +18,7 @@ const els = {
   problemCount: document.querySelector("#problemCount"),
   problemCountPreset: document.querySelector("#problemCountPreset"),
   columns: document.querySelector("#columns"),
+  showHint: document.querySelector("#showHint"),
   printBtn: document.querySelector("#printBtn"),
   regenerateBtn: document.querySelector("#regenerateBtn"),
   copyLinkBtn: document.querySelector("#copyLinkBtn"),
@@ -58,6 +59,7 @@ function getSettings() {
     difficulty: clampChoice(els.difficulty.value, difficultyValues(), APP.defaultDifficulty),
     count: getProblemCount(),
     columns: Number.parseInt(clampChoice(els.columns.value, ["1", "2", "3"], String(APP.defaultCols)), 10),
+    showHint: els.showHint.checked,
   };
 }
 
@@ -70,6 +72,7 @@ function applySettings(settings) {
   els.problemCount.value = String(clampNumber(settings.count, problemCountMin, problemCountMax, APP.defaultCount));
   els.problemCountPreset.value = "";
   els.columns.value = clampChoice(settings.columns, ["1", "2", "3"], String(APP.defaultCols));
+  els.showHint.checked = Boolean(settings.showHint);
 }
 
 function setStatus(message) {
@@ -208,7 +211,7 @@ function renderPage(kind, showAnswer) {
   const kindLabel = page.querySelector("[data-kind]");
   kindLabel.textContent = kind;
   if (showAnswer) kindLabel.classList.add("answer");
-  if (!showAnswer && settings.difficulty === "easy") {
+  if (!showAnswer && settings.showHint) {
     const hint = document.createElement("div");
     hint.className = "page-hint";
     hint.textContent = "ヒント: 1L = 10dL、1dL = 100mL、1L = 1000mL";
@@ -312,6 +315,7 @@ async function copyShareUrl() {
 function bindEvents() {
   [els.studentName, els.worksheetDate, els.worksheetTitle].forEach((control) => control.addEventListener("input", render));
   [els.difficulty, els.problemCount, els.columns].forEach((control) => control.addEventListener("change", generateProblems));
+  els.showHint.addEventListener("change", render);
   els.problemCount.addEventListener("input", () => {
     if (els.problemCount.value === "") return;
     els.problemCountPreset.value = "";
