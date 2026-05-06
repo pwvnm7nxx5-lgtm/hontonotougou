@@ -266,8 +266,8 @@ h1 {
 }
 
 .app-card-body {
-  display: grid;
-  align-content: start;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
   min-width: 0;
   padding-right: 34px;
@@ -331,9 +331,10 @@ h2 {
   display: inline-grid;
   place-items: center;
   justify-self: start;
+  align-self: flex-start;
   min-height: 40px;
   max-width: 100%;
-  margin-top: 4px;
+  margin-top: auto;
   border: 1px solid var(--accent);
   border-radius: 6px;
   background: var(--accent);

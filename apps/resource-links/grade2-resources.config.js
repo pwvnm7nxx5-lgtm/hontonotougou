@@ -180,16 +180,4 @@ window.PRINT_RESOURCES = [
     unit: "長さ",
     tags: ["2年生", "長さ", "m", "cm", "mm"],
   },
-  {
-    id: "jakka-kanji-grade2",
-    title: "小学2年生 漢字練習プリント",
-    description: "2年生漢字のなぞり、読み、書き取り、書き順などを選べます。",
-    url: "https://www.jakka.jp/2.htm",
-    siteId: "jakka",
-    siteTitle: "JAKKA",
-    subject: "国語",
-    grades: ["2"],
-    unit: "漢字",
-    tags: ["2年生", "漢字", "なぞり", "書き取り", "書き順"],
-  },
 ];
