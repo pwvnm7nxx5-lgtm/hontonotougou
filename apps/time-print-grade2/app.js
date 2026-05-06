@@ -5,7 +5,7 @@
   stateVersion: 3,
   defaultType: "read",
   defaultDifficulty: "normal",
-  defaultCount: 4,
+  defaultCount: 6,
   defaultCols: 2,
 };
 
@@ -20,7 +20,6 @@ const els = {
   minuteNumbers: document.querySelector("#minuteNumbers"),
   problemCount: document.querySelector("#problemCount"),
   problemCountPreset: document.querySelector("#problemCountPreset"),
-  columns: document.querySelector("#columns"),
   printBtn: document.querySelector("#printBtn"),
   regenerateBtn: document.querySelector("#regenerateBtn"),
   copyLinkBtn: document.querySelector("#copyLinkBtn"),
@@ -32,7 +31,7 @@ const els = {
 
 const stateStorageKey = `${APP.id}-state`;
 const problemCountMin = 1;
-const problemCountMax = 4;
+const problemCountMax = 6;
 let statusTimer;
 let problems = [];
 
@@ -50,7 +49,7 @@ function getSettings() {
     difficulty: clampChoice(els.difficulty.value, difficultyValues(), APP.defaultDifficulty),
     minuteNumbers: els.minuteNumbers.checked,
     count: getProblemCount(),
-    columns: Number.parseInt(clampChoice(els.columns.value, ["1", "2"], String(APP.defaultCols)), 10),
+    columns: APP.defaultCols,
   };
 }
 function applySettings(settings) {
@@ -63,7 +62,6 @@ function applySettings(settings) {
   els.minuteNumbers.checked = settings.minuteNumbers === true;
   els.problemCount.value = String(clampNumber(settings.count, problemCountMin, problemCountMax, APP.defaultCount));
   els.problemCountPreset.value = "";
-  els.columns.value = clampChoice(settings.columns, ["1", "2"], String(APP.defaultCols));
 }
 function setStatus(message) {
   window.clearTimeout(statusTimer);
@@ -261,8 +259,8 @@ function renderPage(kind, showAnswer) {
   if (showAnswer) kindLabel.classList.add("answer");
   const list = page.querySelector("[data-problems]");
   list.style.setProperty("--cols", settings.columns);
-  list.style.setProperty("--row-gap", settings.count > 24 ? "4mm" : "7mm");
-  list.style.setProperty("--problem-min", settings.count > 24 ? "28mm" : "36mm");
+  list.style.setProperty("--row-gap", settings.count >= 6 ? "6mm" : "8mm");
+  list.style.setProperty("--problem-min", settings.count >= 6 ? "54mm" : "64mm");
   problems.forEach((problem) => {
     const item = document.createElement("li");
     item.className = "problem";
@@ -320,7 +318,7 @@ async function copyShareUrl() {
 }
 function bindEvents() {
   [els.studentName, els.worksheetDate, els.worksheetTitle].forEach((control) => control.addEventListener("input", render));
-  [els.problemType, els.difficulty, els.minuteNumbers, els.problemCount, els.columns].forEach((control) => control.addEventListener("change", generateProblems));
+  [els.problemType, els.difficulty, els.minuteNumbers, els.problemCount].forEach((control) => control.addEventListener("change", generateProblems));
   els.problemCount.addEventListener("input", () => { if (els.problemCount.value === "") return; els.problemCountPreset.value = ""; generateProblems(); });
   els.problemCountPreset.addEventListener("change", () => { if (!els.problemCountPreset.value) return; els.problemCount.value = els.problemCountPreset.value; generateProblems(); els.problemCountPreset.value = ""; });
   els.printBtn.addEventListener("click", () => { render(); window.print(); });
