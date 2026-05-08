@@ -316,9 +316,10 @@ button {
 
 .problem-card {
   display: grid;
-  gap: 3mm;
-  padding-bottom: 3mm;
+  gap: var(--card-gap, 3mm);
+  padding-bottom: var(--card-gap, 3mm);
   border-bottom: 1px solid var(--line);
+  font-size: var(--problem-font);
 }
 
 .prompt {
@@ -369,16 +370,22 @@ button {
 }
 
 .dot-row {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  justify-content: center;
+  gap: 5px;
+  max-width: 150px;
+}
+
+.dot-group {
+  display: grid;
+  grid-template-columns: repeat(5, var(--dot-size, 10px));
   justify-content: center;
   gap: 4px;
-  max-width: 120px;
 }
 
 .dot {
-  width: 10px;
-  height: 10px;
+  width: var(--dot-size, 10px);
+  height: var(--dot-size, 10px);
   border-radius: 999px;
   background: var(--accent);
 }

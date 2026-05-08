@@ -394,9 +394,10 @@ button {
 
 .problem-card {
   display: grid;
-  gap: 3mm;
-  padding-bottom: 3mm;
+  gap: var(--card-gap, 3mm);
+  padding-bottom: var(--card-gap, 3mm);
   border-bottom: 1px solid var(--line);
+  font-size: var(--problem-font);
 }
 
 .prompt {
@@ -406,12 +407,13 @@ button {
 .visual {
   display: grid;
   place-items: center;
-  min-height: 22mm;
+  min-height: var(--visual-min, 22mm);
 }
 
 .visual svg {
   max-width: 100%;
   height: auto;
+  width: var(--visual-width, 132px);
 }
 
 .answer-line {
@@ -424,8 +426,8 @@ button {
 .blank {
   display: inline-grid;
   place-items: center;
-  min-width: 28mm;
-  min-height: 8mm;
+  min-width: var(--blank-width, 28mm);
+  min-height: var(--blank-height, 8mm);
   border: 1px solid #cfd8e3;
   border-radius: 6px;
   color: transparent;
