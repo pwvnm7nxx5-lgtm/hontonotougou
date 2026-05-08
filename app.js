@@ -1,42 +1,17 @@
 const apps = Array.isArray(window.INTEGRATED_APPS) ? window.INTEGRATED_APPS : [];
+const launcherConfig = window.LauncherConfig;
 const storage = window.LauncherStorage;
 const filters = window.LauncherFilters;
+const filterUi = window.LauncherFilterUi;
+const favoriteUi = window.LauncherFavoriteUi;
 const bookmarks = window.LauncherBookmarks;
-
-const gradeOptions = [
-  { value: "all", label: "全学年" },
-  { value: "1", label: "1年" },
-  { value: "2", label: "2年" },
-  { value: "3", label: "3年" },
-];
+const bookmarkUi = window.LauncherBookmarkUi;
+const cardUi = window.LauncherCardUi;
+const panelUi = window.LauncherPanelUi;
+const updates = window.LauncherUpdates;
 
 const updateHistory = Array.isArray(window.UPDATE_HISTORY) ? window.UPDATE_HISTORY : [];
-
-const elements = {
-  appCount: document.querySelector("#appCount"),
-  appGrid: document.querySelector("#appGrid"),
-  emptyState: document.querySelector("#emptyState"),
-  searchInput: document.querySelector("#searchInput"),
-  gradeFilters: document.querySelector("#gradeFilters"),
-  categoryFilters: document.querySelector("#categoryFilters"),
-  favoriteFilter: document.querySelector("#favoriteFilter"),
-  bookmarkPanelToggle: document.querySelector("#bookmarkPanelToggle"),
-  bookmarkPanel: document.querySelector("#bookmarkPanel"),
-  bookmarkChooser: document.querySelector("#bookmarkChooser"),
-  bookmarkChooserTitle: document.querySelector("#bookmarkChooserTitle"),
-  bookmarkChooserApp: document.querySelector("#bookmarkChooserApp"),
-  bookmarkChooserFolders: document.querySelector("#bookmarkChooserFolders"),
-  bookmarkChooserName: document.querySelector("#bookmarkChooserName"),
-  bookmarkChooserCreate: document.querySelector("#bookmarkChooserCreate"),
-  bookmarkChooserClose: document.querySelector("#bookmarkChooserClose"),
-  bookmarkFolderSelect: document.querySelector("#bookmarkFolderSelect"),
-  bookmarkFolderName: document.querySelector("#bookmarkFolderName"),
-  createBookmarkFolder: document.querySelector("#createBookmarkFolder"),
-  deleteBookmarkFolder: document.querySelector("#deleteBookmarkFolder"),
-  updatesToggle: document.querySelector("#updatesToggle"),
-  updatesPanel: document.querySelector("#updatesPanel"),
-  updateList: document.querySelector("#updateList"),
-};
+const elements = window.LauncherElements.get();
 
 let selectedGrade = "all";
 let selectedCategory = "all";
@@ -59,36 +34,8 @@ function appIsBookmarked(appId) {
   return bookmarks.appIsBookmarked(bookmarkFolders, selectedBookmarkFolderId, appId);
 }
 
-function makeGradeButton(option) {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "filter-button grade-button";
-  button.dataset.grade = option.value;
-  button.textContent = option.label;
-  button.setAttribute("aria-pressed", String(option.value === selectedGrade));
-  button.addEventListener("click", () => {
-    selectedGrade = option.value;
-    render();
-  });
-  return button;
-}
-
-function makeCategoryButton(category) {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "filter-button";
-  button.dataset.category = category;
-  button.textContent = category === "all" ? "すべて" : category;
-  button.setAttribute("aria-pressed", String(category === selectedCategory));
-  button.addEventListener("click", () => {
-    selectedCategory = category;
-    render();
-  });
-  return button;
-}
-
 function updateFavoriteFilter() {
-  elements.favoriteFilter.setAttribute("aria-pressed", String(showFavoritesOnly));
+  favoriteUi.updateFilter(elements.favoriteFilter, showFavoritesOnly);
 }
 
 function updateBookmarkFilter() {
@@ -111,15 +58,7 @@ function toggleBookmark(appId) {
 }
 
 function makeFavoriteButton(app) {
-  const button = document.createElement("button");
-  const isFavorite = favorites.has(app.id);
-  button.type = "button";
-  button.className = "favorite-button";
-  button.textContent = isFavorite ? "★" : "☆";
-  button.setAttribute("aria-label", isFavorite ? `${app.title}をお気に入りから外す` : `${app.title}をお気に入りに追加`);
-  button.setAttribute("aria-pressed", String(isFavorite));
-  button.addEventListener("click", () => toggleFavorite(app.id));
-  return button;
+  return favoriteUi.makeButton(app, favorites.has(app.id), toggleFavorite);
 }
 
 function makeBookmarkButton(app) {
@@ -148,88 +87,39 @@ function makeBookmarkButton(app) {
 }
 
 function makeAppCard(app) {
-  const article = document.createElement("article");
-  article.className = "app-card";
-  article.style.setProperty("--accent", app.accent || "#2f6f8f");
-
-  const mark = document.createElement("div");
-  mark.className = "app-mark";
-  mark.setAttribute("aria-hidden", "true");
-  mark.textContent = app.title.slice(0, 1);
-
-  const body = document.createElement("div");
-  body.className = "app-card-body";
-
-  const meta = document.createElement("div");
-  meta.className = "meta-row";
-
-  const grade = document.createElement("span");
-  grade.className = "grade";
-  grade.textContent = filters.getGradeLabel(app);
-  meta.append(grade);
-
-  const category = document.createElement("span");
-  category.className = "category";
-  category.textContent = app.category || "その他";
-  meta.append(category);
-
-  const status = document.createElement("span");
-  status.className = app.status === "ready" ? "ready" : "ready dev-status";
-  status.textContent = app.status === "ready" ? "利用可" : app.status || "";
-  if (status.textContent) {
-    meta.append(status);
-  }
-
-  const title = document.createElement("h2");
-  title.textContent = app.title;
-
-  const description = document.createElement("p");
-  description.textContent = app.description;
-
-  const tags = document.createElement("div");
-  tags.className = "tag-row";
-  (app.tags || []).forEach((tag) => {
-    const span = document.createElement("span");
-    span.textContent = tag;
-    tags.append(span);
+  return cardUi.makeAppCard({
+    app,
+    gradeLabel: filters.getGradeLabel(app),
+    favoriteButton: makeFavoriteButton(app),
+    bookmarkButton: makeBookmarkButton(app),
   });
-
-  const link = document.createElement("a");
-  link.className = "launch-link";
-  link.href = app.href;
-  link.textContent = app.actionLabel || "開く";
-
-  body.append(meta, title, description, tags, link);
-  const cardActions = document.createElement("div");
-  cardActions.className = "card-actions";
-  cardActions.append(makeFavoriteButton(app), makeBookmarkButton(app));
-
-  article.append(cardActions, mark, body);
-  return article;
 }
 
 function renderGrades() {
-  elements.gradeFilters.replaceChildren(...gradeOptions.map(makeGradeButton));
+  const buttons = launcherConfig.gradeOptions.map((option) =>
+    filterUi.makeGradeButton(option, selectedGrade, (grade) => {
+      selectedGrade = grade;
+      render();
+    })
+  );
+  elements.gradeFilters.replaceChildren(...buttons);
 }
 
 function renderCategories() {
-  elements.categoryFilters.replaceChildren(...filters.getCategories(apps).map(makeCategoryButton));
+  const buttons = filters.getCategories(apps).map((category) =>
+    filterUi.makeCategoryButton(category, selectedCategory, (nextCategory) => {
+      selectedCategory = nextCategory;
+      render();
+    })
+  );
+  elements.categoryFilters.replaceChildren(...buttons);
 }
 
 function renderBookmarkFolders() {
   if (!bookmarkFolders.some((folder) => folder.id === selectedBookmarkFolderId)) {
     selectedBookmarkFolderId = bookmarkFolders[0]?.id || "";
   }
-
-  const options = [
-    new Option("フォルダなし", ""),
-    ...bookmarkFolders.map((folder) => {
-      const count = folder.appIds.length;
-      return new Option(`${folder.name} (${count})`, folder.id);
-    }),
-  ];
-  elements.bookmarkFolderSelect.replaceChildren(...options);
-  elements.bookmarkFolderSelect.value = selectedBookmarkFolderId;
+  bookmarkUi.renderFolderSelect(elements.bookmarkFolderSelect, bookmarkFolders, selectedBookmarkFolderId);
 }
 
 function saveAppToBookmarkFolder(appId, folderId) {
@@ -243,17 +133,6 @@ function saveAppToBookmarkFolder(appId, folderId) {
   render();
 }
 
-function makeChooserFolderButton(folder) {
-  const button = document.createElement("button");
-  const containsApp = folder.appIds.includes(chooserAppId);
-  button.type = "button";
-  button.className = "chooser-folder-button";
-  button.setAttribute("aria-pressed", String(containsApp));
-  button.textContent = containsApp ? `${folder.name} から外す` : `${folder.name} に保存`;
-  button.addEventListener("click", () => saveAppToBookmarkFolder(chooserAppId, folder.id));
-  return button;
-}
-
 function renderBookmarkChooser() {
   const app = apps.find((item) => item.id === chooserAppId);
   if (!app) {
@@ -261,30 +140,24 @@ function renderBookmarkChooser() {
     return;
   }
 
-  elements.bookmarkChooserTitle.textContent = "保存先を選ぶ";
-  elements.bookmarkChooserApp.textContent = app.title;
-
-  if (bookmarkFolders.length) {
-    elements.bookmarkChooserFolders.replaceChildren(...bookmarkFolders.map(makeChooserFolderButton));
-  } else {
-    const empty = document.createElement("p");
-    empty.className = "chooser-empty";
-    empty.textContent = "まだフォルダがありません。下で名前を付けて作成できます。";
-    elements.bookmarkChooserFolders.replaceChildren(empty);
-  }
+  bookmarkUi.renderChooser({
+    elements,
+    app,
+    bookmarkFolders,
+    appId: chooserAppId,
+    onSelectFolder: (folderId) => saveAppToBookmarkFolder(chooserAppId, folderId),
+  });
 }
 
 function openBookmarkChooser(appId) {
   chooserAppId = appId;
   renderBookmarkChooser();
-  elements.bookmarkChooser.hidden = false;
-  elements.bookmarkChooserName.value = "";
-  elements.bookmarkChooserName.placeholder = "新しいフォルダ名";
+  bookmarkUi.openChooser(elements);
 }
 
 function closeBookmarkChooser() {
   chooserAppId = "";
-  elements.bookmarkChooser.hidden = true;
+  bookmarkUi.closeChooser(elements);
 }
 
 function createFolderFromChooser() {
@@ -320,34 +193,13 @@ function renderApps() {
   elements.appCount.textContent = String(visibleApps.length);
   elements.appGrid.replaceChildren(...visibleApps.map(makeAppCard));
   elements.emptyState.textContent = selectedGrade === "3"
-    ? "3年生のプリント作成アプリは準備中です。外部教材は右上の「外部教材を探す」から確認できます。"
-    : "該当するアプリはありません。";
+    ? launcherConfig.emptyMessages.grade3
+    : launcherConfig.emptyMessages.default;
   elements.emptyState.hidden = visibleApps.length > 0;
 }
 
 function renderUpdates() {
-  const items = updateHistory.map((item) => {
-    const li = document.createElement("li");
-    li.className = "update-item";
-
-    const date = document.createElement("span");
-    date.className = "update-date";
-    date.textContent = item.date;
-
-    const title = document.createElement("span");
-    title.className = "update-title";
-    title.textContent = item.title;
-
-    li.append(date, title);
-    if (item.isNew) {
-      const badge = document.createElement("span");
-      badge.className = "new-badge";
-      badge.textContent = "NEW";
-      li.append(badge);
-    }
-    return li;
-  });
-  elements.updateList.replaceChildren(...items);
+  updates.render(updateHistory, elements.updateList);
 }
 
 function render() {
@@ -396,15 +248,11 @@ function deleteSelectedBookmarkFolder() {
 }
 
 function toggleUpdatesPanel() {
-  const shouldOpen = elements.updatesPanel.hidden;
-  elements.updatesPanel.hidden = !shouldOpen;
-  elements.updatesToggle.setAttribute("aria-expanded", String(shouldOpen));
+  panelUi.toggle(elements.updatesPanel, elements.updatesToggle);
 }
 
 function toggleBookmarkPanel() {
-  const shouldOpen = elements.bookmarkPanel.hidden;
-  elements.bookmarkPanel.hidden = !shouldOpen;
-  elements.bookmarkPanelToggle.setAttribute("aria-expanded", String(shouldOpen));
+  const shouldOpen = panelUi.toggle(elements.bookmarkPanel, elements.bookmarkPanelToggle);
   if (shouldOpen && selectedBookmarkFolderId) {
     showBookmarksOnly = true;
     render();
@@ -413,18 +261,16 @@ function toggleBookmarkPanel() {
 
 function closeFloatingPanels(event) {
   const target = event.target;
-  const clickedUpdates = elements.updatesPanel.contains(target) || elements.updatesToggle.contains(target);
-  const clickedBookmarks = elements.bookmarkPanel.contains(target) || elements.bookmarkPanelToggle.contains(target);
+  const clickedUpdates = panelUi.containsTarget(elements.updatesPanel, elements.updatesToggle, target);
+  const clickedBookmarks = panelUi.containsTarget(elements.bookmarkPanel, elements.bookmarkPanelToggle, target);
   const clickedChooser = elements.bookmarkChooser.contains(target) || target.closest?.(".bookmark-button");
 
   if (!clickedUpdates && !elements.updatesPanel.hidden) {
-    elements.updatesPanel.hidden = true;
-    elements.updatesToggle.setAttribute("aria-expanded", "false");
+    panelUi.close(elements.updatesPanel, elements.updatesToggle);
   }
 
   if (!clickedBookmarks && !elements.bookmarkPanel.hidden) {
-    elements.bookmarkPanel.hidden = true;
-    elements.bookmarkPanelToggle.setAttribute("aria-expanded", "false");
+    panelUi.close(elements.bookmarkPanel, elements.bookmarkPanelToggle);
   }
 
   if (!clickedChooser && !elements.bookmarkChooser.hidden) {

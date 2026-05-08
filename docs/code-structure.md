@@ -13,13 +13,30 @@
   - 新しいアプリを追加するときの主な編集場所。
 - `updates.config.js`
   - 更新履歴の表示データ。
+- `launcher.config.js`
+  - 入口ページの固定設定。
+  - 学年フィルタや空表示メッセージを管理する。
+- `launcher.elements.js`
+  - 入口ページで使うDOM参照をまとめる。
+- `launcher.updates.js`
+  - 更新履歴リストのDOM生成と描画。
+- `launcher.panel-ui.js`
+  - 更新履歴、ブックマークなどのパネル開閉DOM操作。
 - `launcher.storage.js`
   - 入口ページのお気に入り、ブックマークフォルダの保存処理。
   - 既存の localStorage キーを維持する。
 - `launcher.filters.js`
   - 入口ページの学年、カテゴリ、検索、お気に入り、ブックマーク絞り込み処理。
+- `launcher.filter-ui.js`
+  - 学年・カテゴリのフィルタボタンDOM生成。
+- `launcher.favorite-ui.js`
+  - お気に入りボタンとお気に入りフィルタのDOM反映。
 - `launcher.bookmarks.js`
   - ブックマークフォルダのID生成、選択フォルダ判定、アプリ追加/解除の小さな共通処理。
+- `launcher.bookmark-ui.js`
+  - ブックマークフォルダ選択欄と保存先ダイアログのDOM描画。
+- `launcher.card-ui.js`
+  - トップページのアプリカードDOM生成。
 - `app.js`
   - 入口ページの描画、お気に入り、ブックマークの動作、イベント登録。
 
