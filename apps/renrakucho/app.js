@@ -94,7 +94,7 @@ function loadState() {
       ...cloneDefaultState(),
       ...parsed,
       circleTemplates: parsed.circleTemplates?.length
-        ? parsed.circleTemplates
+        ? normalizeCircleTemplates(parsed.circleTemplates)
         : cloneDefaultState().circleTemplates,
       phraseTemplates: parsed.phraseTemplates?.length
         ? parsed.phraseTemplates
@@ -166,6 +166,7 @@ function appendPlainText(nodes, text) {
 }
 
 function renderCircleTemplates() {
+  state.circleTemplates = normalizeCircleTemplates(state.circleTemplates);
   elements.circleTemplateList.replaceChildren();
   state.circleTemplates.forEach((template) => {
     const chip = document.createElement("div");
@@ -403,13 +404,21 @@ function importTemplates(event) {
 }
 
 function normalizeCircleTemplates(templates) {
+  const defaultsById = new Map(cloneDefaultState().circleTemplates.map((template) => [template.id, template]));
   return templates
-    .filter((template) => template && typeof template.name === "string" && typeof template.token === "string")
-    .map((template) => ({
-      id: template.id || makeId("circle"),
-      name: template.name.slice(0, 40),
-      token: template.token,
-    }));
+    .filter((template) => template && typeof template.name === "string")
+    .map((template) => {
+      const fallback = defaultsById.get(template.id);
+      const rawToken = typeof template.token === "string" ? template.token : "";
+      const token = /^\[丸:[^\]]{1,2}\]$/.test(rawToken)
+        ? rawToken
+        : fallback?.token || makeCircleToken(template.name.replace("○", ""));
+      return {
+        id: template.id || makeId("circle"),
+        name: template.name.slice(0, 40),
+        token,
+      };
+    });
 }
 
 function normalizePhraseTemplates(templates) {

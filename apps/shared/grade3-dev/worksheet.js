@@ -10,6 +10,10 @@ const els = {
   problemCount: document.querySelector("#problemCount"),
   problemCountPreset: document.querySelector("#problemCountPreset"),
   columns: document.querySelector("#columns"),
+  problemScale: document.querySelector("#problemScale"),
+  problemSpacing: document.querySelector("#problemSpacing"),
+  minuteNumberMode: document.querySelector("#minuteNumberMode"),
+  includeAnswers: document.querySelector("#includeAnswers"),
   printBtn: document.querySelector("#printButton"),
   regenerateBtn: document.querySelector("#regenerateButton"),
   copyLinkBtn: document.querySelector("#copyLinkButton"),
@@ -58,6 +62,10 @@ function getSettings() {
     type: clampChoice(els.problemType.value, typeValues(), config.types[0].value),
     count: getProblemCount(),
     columns: Number.parseInt(clampChoice(els.columns.value, ["1", "2", "3"], String(config.defaultColumns || 2)), 10),
+    minuteNumberMode: config.kind === "clock"
+      ? clampChoice(els.minuteNumberMode?.value || "none", ["none", "five", "ten"], "none")
+      : "none",
+    includeAnswers: els.includeAnswers.checked,
   };
 }
 
@@ -72,6 +80,10 @@ function applySettings(settings) {
   els.problemCount.value = String(clampNumber(settings.count, problemCountMin, problemCountMax, config.defaultCount || 12));
   els.problemCountPreset.value = "";
   els.columns.value = clampChoice(settings.columns, ["1", "2", "3"], String(config.defaultColumns || 2));
+  if (els.minuteNumberMode) {
+    els.minuteNumberMode.value = clampChoice(settings.minuteNumberMode, ["none", "five", "ten"], "none");
+  }
+  els.includeAnswers.checked = settings.includeAnswers !== false;
 }
 
 function setStatus(message) {
@@ -93,7 +105,7 @@ function timeText(totalMinutes) {
   return minute === 0 ? `${hour}時` : `${hour}時${pad(minute)}分`;
 }
 
-function clockSvg(totalMinutes, handMode = "both") {
+function clockSvg(totalMinutes, handMode = "both", minuteNumberMode = "none") {
   const minutes = ((totalMinutes % 720) + 720) % 720;
   const minute = minutes % 60;
   const hour = Math.floor(minutes / 60) || 12;
@@ -111,6 +123,12 @@ function clockSvg(totalMinutes, handMode = "both") {
     const angle = (n * 30 - 90) * Math.PI / 180;
     return `<text x="${(64 + Math.cos(angle) * 42).toFixed(1)}" y="${(68 + Math.sin(angle) * 42).toFixed(1)}" font-size="11" text-anchor="middle">${n}</text>`;
   }).join("");
+  const minuteNumbers = minuteNumberMode === "none" ? "" : [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60]
+    .filter((value) => minuteNumberMode === "five" || value % 10 === 0)
+    .map((value) => {
+      const angle = (value * 6 - 90) * Math.PI / 180;
+      return `<text class="minute-number" x="${(64 + Math.cos(angle) * 70).toFixed(1)}" y="${(67 + Math.sin(angle) * 70).toFixed(1)}" font-size="8" text-anchor="middle">${value}</text>`;
+    }).join("");
   const minuteAngle = (minute * 6 - 90) * Math.PI / 180;
   const hourAngle = (((hour % 12) + minute / 60) * 30 - 90) * Math.PI / 180;
   const hands = [];
@@ -121,6 +139,7 @@ function clockSvg(totalMinutes, handMode = "both") {
     hands.push(`<line x1="64" y1="64" x2="${(64 + Math.cos(minuteAngle) * 43).toFixed(1)}" y2="${(64 + Math.sin(minuteAngle) * 43).toFixed(1)}" stroke="#111827" stroke-width="3" stroke-linecap="round"/>`);
   }
   hands.push(`<circle cx="64" cy="64" r="3" fill="#111827"/>`);
+  return `<svg class="clock" viewBox="-24 -24 176 176" width="132" height="132" role="img" aria-label="clock"><circle cx="64" cy="64" r="59" fill="#fff" stroke="#344054" stroke-width="3"/>${marks}${nums}${minuteNumbers}${hands.join("")}</svg>`;
   return `<svg class="clock" viewBox="-14 -14 156 156" width="132" height="132" role="img" aria-label="時計"><circle cx="64" cy="64" r="59" fill="#fff" stroke="#344054" stroke-width="3"/>${marks}${nums}${hands.join("")}</svg>`;
 }
 
@@ -146,14 +165,19 @@ function makeClockProblem(settings) {
     return {
       prompt: `${timeText(total)} の針をかきましょう。`,
       answer: timeText(total),
-      visual: clockSvg(total, "none"),
-      answerVisual: clockSvg(total, "both"),
+      clockTotal: total,
+      handMode: "none",
+      answerHandMode: "both",
+      visual: clockSvg(total, "none", settings.minuteNumberMode),
+      answerVisual: clockSvg(total, "both", settings.minuteNumberMode),
     };
   }
   return {
     prompt: "時計の時刻を読みましょう。",
     answer: timeText(total),
-    visual: clockSvg(total, "both"),
+    clockTotal: total,
+    handMode: "both",
+    visual: clockSvg(total, "both", settings.minuteNumberMode),
   };
 }
 
@@ -278,7 +302,7 @@ function generateProblems(options = {}) {
   setStatus("もんだいをつくりなおしました。");
 }
 
-function renderProblem(problem, showAnswer) {
+function renderProblem(problem, showAnswer, settings) {
   const card = document.createElement("div");
   card.className = "problem-card";
   const prompt = document.createElement("div");
@@ -289,7 +313,12 @@ function renderProblem(problem, showAnswer) {
   if (problem.visual) {
     const visual = document.createElement("div");
     visual.className = "visual";
-    visual.innerHTML = showAnswer && problem.answerVisual ? problem.answerVisual : problem.visual;
+    if (typeof problem.clockTotal === "number") {
+      const handMode = showAnswer && problem.answerHandMode ? problem.answerHandMode : problem.handMode || "both";
+      visual.innerHTML = clockSvg(problem.clockTotal, handMode, settings.minuteNumberMode);
+    } else {
+      visual.innerHTML = showAnswer && problem.answerVisual ? problem.answerVisual : problem.visual;
+    }
     card.append(visual);
   }
 
@@ -318,10 +347,21 @@ function applyGridDensity(list, settings) {
     fontSize = 16;
   }
 
+  const scaleMap = { compact: 0.88, normal: 1, large: 1.18 };
+  const spacingMap = { tight: 0.72, normal: 1, wide: 1.35 };
+  const scale = scaleMap[settings.problemScale] || 1;
+  const spacing = spacingMap[settings.problemSpacing] || 1;
+
   list.style.setProperty("--cols", settings.columns);
-  list.style.setProperty("--row-gap", `${rowGap}mm`);
-  list.style.setProperty("--problem-min", `${problemMin}mm`);
-  list.style.setProperty("--problem-font", `${fontSize}px`);
+  list.style.setProperty("--row-gap", `${(rowGap * spacing).toFixed(1)}mm`);
+  list.style.setProperty("--problem-min", `${(problemMin * scale).toFixed(1)}mm`);
+  list.style.setProperty("--problem-font", `${Math.round(fontSize * scale)}px`);
+  list.style.setProperty("--card-gap", `${(3 * spacing).toFixed(1)}mm`);
+  list.style.setProperty("--blank-width", `${(28 * scale).toFixed(1)}mm`);
+  list.style.setProperty("--blank-height", `${(8 * scale).toFixed(1)}mm`);
+  list.style.setProperty("--visual-min", `${(22 * scale).toFixed(1)}mm`);
+  list.style.setProperty("--visual-width", `${Math.round(132 * scale)}px`);
+  list.style.setProperty("--visual-scale", scale);
 }
 
 function problemHasVisual() {
@@ -345,7 +385,7 @@ function renderPage(kind, showAnswer) {
   problems.forEach((problem) => {
     const item = document.createElement("li");
     item.className = "problem";
-    item.append(renderProblem(problem, showAnswer));
+    item.append(renderProblem(problem, showAnswer, settings));
     list.append(item);
   });
   return page;
@@ -362,6 +402,15 @@ function normalizeProblems() {
 }
 
 function render() {
+  normalizeProblems();
+  const pages = [renderPage("もんだい", false)];
+  if (getSettings().includeAnswers) {
+    pages.push(renderPage("こたえ", true));
+  }
+  els.pages.replaceChildren(...pages);
+  els.pageCount.textContent = `${pages.length}枚`;
+  saveState();
+  return;
   normalizeProblems();
   els.pages.replaceChildren(renderPage("もんだい", false), renderPage("こたえ", true));
   els.pageCount.textContent = "2枚";
@@ -405,6 +454,9 @@ function loadInitialState() {
     if (decoded?.settings && Array.isArray(decoded.problems)) {
       applySettings(decoded.settings);
       problems = decoded.problems;
+      if (config.kind === "clock" && problems.some((problem) => typeof problem.clockTotal !== "number")) {
+        problems = [];
+      }
       return;
     }
   }
@@ -416,6 +468,9 @@ function loadInitialState() {
       applySettings(parsed.settings);
       if (Array.isArray(parsed.problems)) {
         problems = parsed.problems;
+        if (config.kind === "clock" && problems.some((problem) => typeof problem.clockTotal !== "number")) {
+          problems = [];
+        }
       }
     }
   } catch {}
@@ -436,6 +491,7 @@ async function copyShareUrl() {
 function bindEvents() {
   [els.studentName, els.worksheetDate, els.worksheetTitle].forEach((control) => control.addEventListener("input", render));
   [els.problemType, els.problemCount, els.columns].forEach((control) => control.addEventListener("change", generateProblems));
+  [els.includeAnswers, els.minuteNumberMode].filter(Boolean).forEach((control) => control.addEventListener("change", render));
   els.problemCount.addEventListener("input", () => {
     if (els.problemCount.value === "") return;
     els.problemCountPreset.value = "";
@@ -455,7 +511,59 @@ function bindEvents() {
   els.copyLinkBtn.addEventListener("click", copyShareUrl);
 }
 
+function makeSelectControl(id, label, options) {
+  const field = document.createElement("label");
+  field.className = "field";
+  const text = document.createElement("span");
+  text.textContent = label;
+  const select = document.createElement("select");
+  select.id = id;
+  options.forEach((option) => {
+    const item = document.createElement("option");
+    item.value = option.value;
+    item.textContent = option.label;
+    if (option.selected) item.selected = true;
+    select.append(item);
+  });
+  field.append(text, select);
+  return field;
+}
+
+function setupPrintControls() {
+  const grid = document.querySelector(".settings-grid");
+  if (config.kind === "clock" && !document.querySelector("#minuteNumberMode")) {
+    grid.append(makeSelectControl("minuteNumberMode", "分の数字", [
+      { value: "none", label: "表示しない", selected: true },
+      { value: "five", label: "5分ごと" },
+      { value: "ten", label: "10分ごと" },
+    ]));
+  }
+  els.minuteNumberMode = document.querySelector("#minuteNumberMode");
+  els.includeAnswers = document.querySelector("#includeAnswers");
+  els.includeAnswers.disabled = false;
+  return;
+  if (!document.querySelector("#problemScale")) {
+    grid.append(makeSelectControl("problemScale", "問題の大きさ", [
+      { value: "compact", label: "小さめ" },
+      { value: "normal", label: "ふつう", selected: true },
+      { value: "large", label: "大きめ" },
+    ]));
+  }
+  if (!document.querySelector("#problemSpacing")) {
+    grid.append(makeSelectControl("problemSpacing", "問題の間隔", [
+      { value: "tight", label: "せまい" },
+      { value: "normal", label: "ふつう", selected: true },
+      { value: "wide", label: "広い" },
+    ]));
+  }
+  els.problemScale = document.querySelector("#problemScale");
+  els.problemSpacing = document.querySelector("#problemSpacing");
+  els.includeAnswers = document.querySelector("#includeAnswers");
+  els.includeAnswers.disabled = false;
+}
+
 function setup() {
+  setupPrintControls();
   document.title = config.title;
   document.querySelector("[data-app-title]").textContent = config.title;
   document.querySelector("[data-app-notice]").textContent = config.notice || `${config.title}は開発中です。プリント作成はできますが、内容や表示はあとで調整します。`;
