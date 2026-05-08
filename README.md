@@ -15,6 +15,7 @@
 1. `apps/` の中に新しいアプリ用フォルダを作ります。
 2. そのフォルダに `index.html`、`styles.css`、`app.js` などを入れます。
 3. `apps.config.js` の `window.INTEGRATED_APPS` に1件追加します。
+4. 更新履歴に出す場合は `updates.config.js` に1件追加します。
 
 例:
 
@@ -35,3 +36,6 @@
 
 `href` は統合トップページから見た相対パスにします。
 
+## 構成メモ
+
+今後の整理方針は `docs/code-structure.md` にまとめています。
