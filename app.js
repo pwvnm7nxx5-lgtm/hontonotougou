@@ -1,4 +1,7 @@
 const apps = Array.isArray(window.INTEGRATED_APPS) ? window.INTEGRATED_APPS : [];
+const storage = window.LauncherStorage;
+const filters = window.LauncherFilters;
+const bookmarks = window.LauncherBookmarks;
 
 const gradeOptions = [
   { value: "all", label: "全学年" },
@@ -7,51 +10,7 @@ const gradeOptions = [
   { value: "3", label: "3年" },
 ];
 
-const favoriteStorageKey = "special-support-app-favorites";
-const bookmarkStorageKey = "special-support-app-bookmark-folders-v1";
-
-const updateHistory = [
-  {
-    date: "5月7日",
-    title: "3年生プリント作成アプリを開発中で追加",
-    isNew: true,
-  },
-  {
-    date: "5月7日",
-    title: "時計プリントの問題数と配置を調整",
-    isNew: true,
-  },
-  {
-    date: "5月6日",
-    title: "漢字プリントの入口と練習欄を整理",
-    isNew: true,
-  },
-  {
-    date: "5月6日",
-    title: "3年生の外部教材リンクを追加",
-    isNew: true,
-  },
-  {
-    date: "5月6日",
-    title: "外部教材リンクの表示を整理",
-    isNew: true,
-  },
-  {
-    date: "5月4日",
-    title: "時計プリントを追加",
-    isNew: false,
-  },
-  {
-    date: "5月4日",
-    title: "漢字なぞりプリントを改善",
-    isNew: false,
-  },
-  {
-    date: "5月4日",
-    title: "バグ修正",
-    isNew: false,
-  },
-];
+const updateHistory = Array.isArray(window.UPDATE_HISTORY) ? window.UPDATE_HISTORY : [];
 
 const elements = {
   appCount: document.querySelector("#appCount"),
@@ -83,115 +42,21 @@ let selectedGrade = "all";
 let selectedCategory = "all";
 let showFavoritesOnly = false;
 let showBookmarksOnly = false;
-let favorites = loadFavorites();
-let bookmarkFolders = loadBookmarkFolders();
+let favorites = storage.loadFavorites();
+let bookmarkFolders = storage.loadBookmarkFolders();
 let selectedBookmarkFolderId = bookmarkFolders[0]?.id || "";
 let chooserAppId = "";
 
-function normalizeText(value) {
-  return String(value || "").trim().toLowerCase();
-}
-
-function loadFavorites() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(favoriteStorageKey) || "[]");
-    return new Set(Array.isArray(saved) ? saved : []);
-  } catch {
-    return new Set();
-  }
-}
-
-function saveFavorites() {
-  try {
-    localStorage.setItem(favoriteStorageKey, JSON.stringify([...favorites]));
-  } catch {}
-}
-
-function loadBookmarkFolders() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(bookmarkStorageKey) || "{}");
-    return Array.isArray(saved.folders) ? saved.folders.map(normalizeBookmarkFolder).filter(Boolean) : [];
-  } catch {
-    return [];
-  }
-}
-
-function normalizeBookmarkFolder(folder) {
-  if (!folder || !folder.id || !folder.name) {
-    return null;
-  }
-  return {
-    id: String(folder.id),
-    name: String(folder.name),
-    appIds: Array.isArray(folder.appIds) ? [...new Set(folder.appIds.map(String))] : [],
-  };
-}
-
-function saveBookmarkFolders() {
-  try {
-    localStorage.setItem(bookmarkStorageKey, JSON.stringify({ folders: bookmarkFolders }));
-  } catch {}
-}
-
 function makeBookmarkFolderId() {
-  return `folder-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+  return bookmarks.makeFolderId();
 }
 
 function getSelectedBookmarkFolder() {
-  return bookmarkFolders.find((folder) => folder.id === selectedBookmarkFolderId) || null;
+  return bookmarks.getSelectedFolder(bookmarkFolders, selectedBookmarkFolderId);
 }
 
 function appIsBookmarked(appId) {
-  const selectedFolder = getSelectedBookmarkFolder();
-  if (selectedFolder) {
-    return selectedFolder.appIds.includes(appId);
-  }
-  return bookmarkFolders.some((folder) => folder.appIds.includes(appId));
-}
-
-function getAppGrades(app) {
-  if (Array.isArray(app.grades) && app.grades.length) {
-    return app.grades.map(String);
-  }
-  const text = [app.title, ...(Array.isArray(app.tags) ? app.tags : [])].join(" ");
-  if (text.includes("1年")) return ["1"];
-  if (text.includes("2年")) return ["2"];
-  if (text.includes("3年")) return ["3"];
-  return ["all"];
-}
-
-function getGradeLabel(app) {
-  const grades = getAppGrades(app);
-  if (grades.includes("all")) return "全学年";
-  return grades.map((grade) => `${grade}年`).join("・");
-}
-
-function getCategories() {
-  return ["all", ...new Set(apps.map((app) => app.category).filter(Boolean))];
-}
-
-function matchesGrade(app) {
-  if (selectedGrade === "all") {
-    return true;
-  }
-  const grades = getAppGrades(app);
-  return grades.includes(selectedGrade);
-}
-
-function matchesApp(app, query) {
-  if (!query) {
-    return true;
-  }
-
-  const searchable = [
-    app.title,
-    app.description,
-    app.category,
-    getGradeLabel(app),
-    ...(Array.isArray(app.tags) ? app.tags : []),
-  ].join(" ");
-
-  return normalizeText(searchable).includes(query);
+  return bookmarks.appIsBookmarked(bookmarkFolders, selectedBookmarkFolderId, appId);
 }
 
 function makeGradeButton(option) {
@@ -237,7 +102,7 @@ function toggleFavorite(appId) {
   } else {
     favorites.add(appId);
   }
-  saveFavorites();
+  storage.saveFavorites(favorites);
   renderApps();
 }
 
@@ -300,7 +165,7 @@ function makeAppCard(app) {
 
   const grade = document.createElement("span");
   grade.className = "grade";
-  grade.textContent = getGradeLabel(app);
+  grade.textContent = filters.getGradeLabel(app);
   meta.append(grade);
 
   const category = document.createElement("span");
@@ -343,23 +208,12 @@ function makeAppCard(app) {
   return article;
 }
 
-function getVisibleApps() {
-  const query = normalizeText(elements.searchInput.value);
-  const selectedFolder = getSelectedBookmarkFolder();
-  return apps.filter((app) => {
-    const categoryMatches = selectedCategory === "all" || app.category === selectedCategory;
-    const favoriteMatches = !showFavoritesOnly || favorites.has(app.id);
-    const bookmarkMatches = !showBookmarksOnly || (selectedFolder ? selectedFolder.appIds.includes(app.id) : false);
-    return matchesGrade(app) && categoryMatches && favoriteMatches && bookmarkMatches && matchesApp(app, query);
-  });
-}
-
 function renderGrades() {
   elements.gradeFilters.replaceChildren(...gradeOptions.map(makeGradeButton));
 }
 
 function renderCategories() {
-  elements.categoryFilters.replaceChildren(...getCategories().map(makeCategoryButton));
+  elements.categoryFilters.replaceChildren(...filters.getCategories(apps).map(makeCategoryButton));
 }
 
 function renderBookmarkFolders() {
@@ -379,17 +233,12 @@ function renderBookmarkFolders() {
 }
 
 function saveAppToBookmarkFolder(appId, folderId) {
-  const folder = bookmarkFolders.find((item) => item.id === folderId);
+  const folder = bookmarks.toggleAppInFolder(bookmarkFolders, folderId, appId);
   if (!folder) {
     return;
   }
-  if (folder.appIds.includes(appId)) {
-    folder.appIds = folder.appIds.filter((id) => id !== appId);
-  } else {
-    folder.appIds.push(appId);
-  }
   selectedBookmarkFolderId = folder.id;
-  saveBookmarkFolders();
+  storage.saveBookmarkFolders(bookmarkFolders);
   closeBookmarkChooser();
   render();
 }
@@ -452,13 +301,22 @@ function createFolderFromChooser() {
   };
   bookmarkFolders.push(folder);
   selectedBookmarkFolderId = folder.id;
-  saveBookmarkFolders();
+  storage.saveBookmarkFolders(bookmarkFolders);
   closeBookmarkChooser();
   render();
 }
 
 function renderApps() {
-  const visibleApps = getVisibleApps();
+  const visibleApps = filters.getVisibleApps({
+    apps,
+    query: elements.searchInput.value,
+    selectedGrade,
+    selectedCategory,
+    showFavoritesOnly,
+    showBookmarksOnly,
+    favorites,
+    selectedFolder: getSelectedBookmarkFolder(),
+  });
   elements.appCount.textContent = String(visibleApps.length);
   elements.appGrid.replaceChildren(...visibleApps.map(makeAppCard));
   elements.emptyState.textContent = selectedGrade === "3"
@@ -517,7 +375,7 @@ function createBookmarkFolder() {
   selectedBookmarkFolderId = folder.id;
   showBookmarksOnly = false;
   elements.bookmarkFolderName.value = "";
-  saveBookmarkFolders();
+  storage.saveBookmarkFolders(bookmarkFolders);
   render();
 }
 
@@ -533,7 +391,7 @@ function deleteSelectedBookmarkFolder() {
   bookmarkFolders = bookmarkFolders.filter((item) => item.id !== folder.id);
   selectedBookmarkFolderId = bookmarkFolders[0]?.id || "";
   showBookmarksOnly = false;
-  saveBookmarkFolders();
+  storage.saveBookmarkFolders(bookmarkFolders);
   render();
 }
 
