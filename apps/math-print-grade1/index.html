@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>1年生 計算プリント</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="../print-layout-addon.css">
 </head>
 <body>
   <div class="app-shell">
@@ -73,7 +74,7 @@
 
       <div class="check-row">
         <label><input id="includeZero" type="checkbox"> 0を含める</label>
-        <label><input id="includeAnswers" type="checkbox" checked disabled> 答えページをつける</label>
+        <label><input id="includeAnswers" type="checkbox" checked> 答えページをつける</label>
       </div>
 
       <div class="actions">
@@ -103,5 +104,6 @@
   </template>
 
   <script src="app.js"></script>
+  <script src="../print-layout-addon.js"></script>
 </body>
 </html>

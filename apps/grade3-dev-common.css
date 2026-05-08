@@ -130,15 +130,26 @@ a {
 
 input[type="text"],
 input[type="number"],
+input[type="range"],
 select {
   width: 100%;
-  height: 38px;
   border: 1px solid #cfd8e3;
   border-radius: 8px;
   background: #fbfdff;
   color: var(--ink);
   padding: 6px 9px;
   outline: none;
+}
+
+input[type="text"],
+input[type="number"],
+select {
+  height: 38px;
+}
+
+input[type="range"] {
+  height: 38px;
+  accent-color: var(--accent);
 }
 
 input:focus,
@@ -158,6 +169,17 @@ select:focus {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 78px;
   gap: 6px;
+}
+
+.range-field {
+  grid-column: span 2;
+}
+
+.range-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 76px;
+  gap: 8px;
+  align-items: center;
 }
 
 .combo-input select {
@@ -184,6 +206,19 @@ select:focus {
 
 .check-row input {
   accent-color: var(--accent);
+  width: 18px;
+  height: 18px;
+}
+
+.layout-warning {
+  margin: 10px 0 16px;
+  padding: 9px 11px;
+  border: 1px solid #f1d28a;
+  border-radius: 8px;
+  background: #fff8e6;
+  color: #7a5200;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .actions {
@@ -228,7 +263,7 @@ button {
 .print-page {
   width: 210mm;
   min-height: 297mm;
-  padding: 14mm 13mm;
+  padding: var(--page-margin-y, 14mm) var(--page-margin-x, 13mm);
   background:
     linear-gradient(90deg, rgb(184 199 214 / 18%) 0 1px, transparent 1px 18mm),
     linear-gradient(rgb(184 199 214 / 16%) 0 1px, transparent 1px 18mm),
@@ -361,7 +396,7 @@ button {
 .problem-grid {
   display: grid;
   grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
-  gap: var(--row-gap) 8mm;
+  gap: var(--row-gap) var(--column-gap, 8mm);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -394,9 +429,10 @@ button {
 
 .problem-card {
   display: grid;
-  gap: 3mm;
-  padding-bottom: 3mm;
+  gap: var(--card-gap, 3mm);
+  padding-bottom: var(--card-gap, 3mm);
   border-bottom: 1px solid var(--line);
+  font-size: var(--problem-font);
 }
 
 .prompt {
@@ -406,12 +442,17 @@ button {
 .visual {
   display: grid;
   place-items: center;
-  min-height: 22mm;
+  min-height: var(--visual-min, 22mm);
 }
 
 .visual svg {
   max-width: 100%;
   height: auto;
+  width: var(--visual-width, 132px);
+}
+
+.visual .clock {
+  width: var(--visual-width, 132px);
 }
 
 .answer-line {
@@ -419,13 +460,14 @@ button {
   align-items: center;
   gap: 6px;
   min-height: 9mm;
+  margin-top: var(--answer-gap, 0mm);
 }
 
 .blank {
   display: inline-grid;
   place-items: center;
-  min-width: 28mm;
-  min-height: 8mm;
+  min-width: var(--blank-width, 28mm);
+  min-height: var(--blank-height, 8mm);
   border: 1px solid #cfd8e3;
   border-radius: 6px;
   color: transparent;
@@ -445,6 +487,11 @@ button {
 .clock text,
 .scale text {
   font-family: "BIZ UDPGothic", "Yu Gothic", sans-serif;
+}
+
+.minute-number {
+  fill: #2563eb;
+  font-weight: 700;
 }
 
 @media (max-width: 980px) {
