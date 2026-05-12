@@ -23,7 +23,7 @@ const els = {
   status: document.querySelector("#status"),
 };
 
-const stateStorageKey = `${config.id}-state`;
+const stateStorageKey = `${config.id}-state-v2`;
 const problemCountMin = 1;
 const problemCountMax = 36;
 let statusTimer;
@@ -44,6 +44,15 @@ function rand(min, max) {
 
 function pick(items) {
   return items[rand(0, items.length - 1)];
+}
+
+function shuffle(items) {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = rand(0, i);
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
 }
 
 function getProblemCount() {
@@ -143,21 +152,6 @@ function clockSvg(totalMinutes, handMode = "both", minuteNumberMode = "none") {
   return `<svg class="clock" viewBox="-14 -14 156 156" width="132" height="132" role="img" aria-label="時計"><circle cx="64" cy="64" r="59" fill="#fff" stroke="#344054" stroke-width="3"/>${marks}${nums}${hands.join("")}</svg>`;
 }
 
-function scaleSvg(grams) {
-  const max = 3000;
-  const angle = -120 + Math.min(grams, max) / max * 240;
-  const rad = (angle - 90) * Math.PI / 180;
-  const x = 70 + Math.cos(rad) * 43;
-  const y = 70 + Math.sin(rad) * 43;
-  const marks = [0, 500, 1000, 1500, 2000, 2500, 3000].map((value) => {
-    const a = (-120 + value / max * 240 - 90) * Math.PI / 180;
-    const mx = 70 + Math.cos(a) * 51;
-    const my = 70 + Math.sin(a) * 51;
-    return `<text x="${mx.toFixed(1)}" y="${my.toFixed(1)}" font-size="8" text-anchor="middle">${value / 1000}</text>`;
-  }).join("");
-  return `<svg class="scale" viewBox="0 0 140 120" width="150" height="126" role="img" aria-label="はかり"><circle cx="70" cy="70" r="58" fill="#fff" stroke="#344054" stroke-width="3"/><text x="70" y="24" font-size="10" text-anchor="middle">kg</text>${marks}<line x1="70" y1="70" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#111827" stroke-width="4" stroke-linecap="round"/><circle cx="70" cy="70" r="4" fill="#111827"/></svg>`;
-}
-
 function makeClockProblem(settings) {
   const step = settings.type === "minute" ? 1 : settings.type === "five" ? 5 : 15;
   const total = rand(1, 11) * 60 + rand(0, Math.floor(59 / step)) * step;
@@ -201,25 +195,38 @@ function makeTimeProblem(settings) {
 }
 
 function makeDivisionProblem(settings) {
-  const divisor = rand(2, 9);
-  if (settings.type === "remainder") {
-    const quotient = rand(2, 9);
-    const remainder = rand(1, divisor - 1);
-    const dividend = divisor * quotient + remainder;
-    return {
-      prompt: `${dividend} ÷ ${divisor} =`,
-      answer: `${quotient} あまり ${remainder}`,
-    };
+  return pick(makeDivisionCandidates(settings));
+}
+
+function makeDivisionCandidates(settings) {
+  const candidates = [];
+  for (let divisor = 2; divisor <= 9; divisor += 1) {
+    for (let quotient = 1; quotient <= 9; quotient += 1) {
+      if (settings.type === "remainder") {
+        for (let remainder = 1; remainder < divisor; remainder += 1) {
+          const dividend = divisor * quotient + remainder;
+          candidates.push({
+            prompt: `${dividend} ÷ ${divisor} =`,
+            answer: `${quotient} あまり ${remainder}`,
+          });
+        }
+      } else {
+        candidates.push({
+          prompt: `${divisor * quotient} ÷ ${divisor} =`,
+          answer: `${quotient}`,
+        });
+      }
+    }
   }
-  const quotient = rand(2, 12);
-  return {
-    prompt: `${divisor * quotient} ÷ ${divisor} =`,
-    answer: `${quotient}`,
-  };
+  return candidates;
 }
 
 function makeBigNumberProblem(settings) {
-  const number = rand(1000, 99999);
+  return pick(makeBigNumberCandidates(settings));
+}
+
+function makeBigNumberCandidates(settings) {
+  const candidates = [];
   const places = [
     ["一万", 10000],
     ["千", 1000],
@@ -227,60 +234,140 @@ function makeBigNumberProblem(settings) {
     ["十", 10],
     ["一", 1],
   ];
-  const place = pick(places);
-  if (settings.type === "place") {
-    return {
+  const seen = new Set();
+  while (candidates.length < 180 && seen.size < 600) {
+    const number = rand(1000, 99999);
+    if (settings.type === "compare") {
+      const other = rand(1000, 99999);
+      const key = `compare:${number}:${other}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      candidates.push({
+        prompt: `${number.toLocaleString("ja-JP")} □ ${other.toLocaleString("ja-JP")}`,
+        answer: number === other ? "=" : number > other ? ">" : "<",
+      });
+      continue;
+    }
+    const availablePlaces = places.filter(([, value]) => value <= number);
+    const place = pick(availablePlaces);
+    const key = `place:${number}:${place[1]}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    candidates.push({
       prompt: `${number.toLocaleString("ja-JP")} の ${place[0]} の位の数字は何ですか。`,
       answer: `${Math.floor(number / place[1]) % 10}`,
-    };
+    });
   }
-  if (settings.type === "compare") {
-    const other = rand(1000, 99999);
-    const sign = number === other ? "=" : number > other ? ">" : "<";
-    return {
-      prompt: `${number.toLocaleString("ja-JP")} □ ${other.toLocaleString("ja-JP")}`,
-      answer: sign,
-    };
-  }
-  return {
-    prompt: `${number.toLocaleString("ja-JP")} を数字で書きましょう。`,
-    answer: String(number),
-  };
+  return candidates;
+}
+
+function formatDecimalTenths(value) {
+  return (value / 10).toFixed(1);
 }
 
 function makeDecimalProblem(settings) {
-  const a = rand(1, 99) / 10;
-  const b = rand(1, 99) / 10;
-  if (settings.type === "compare") {
-    const sign = a === b ? "=" : a > b ? ">" : "<";
-    return { prompt: `${a.toFixed(1)} □ ${b.toFixed(1)}`, answer: sign };
-  }
+  return pick(makeDecimalCandidates(settings));
+}
+
+function makeDecimalCandidates(settings) {
+  const candidates = [];
   if (settings.type === "sub") {
-    const big = Math.max(a, b);
-    const small = Math.min(a, b);
-    return { prompt: `${big.toFixed(1)} - ${small.toFixed(1)} =`, answer: `${(big - small).toFixed(1)}` };
+    for (let a = 2; a <= 100; a += 1) {
+      for (let b = 1; b < a; b += 1) {
+        candidates.push({
+          prompt: `${formatDecimalTenths(a)} - ${formatDecimalTenths(b)} =`,
+          answer: formatDecimalTenths(a - b),
+        });
+      }
+    }
+    return candidates;
   }
-  return { prompt: `${a.toFixed(1)} + ${b.toFixed(1)} =`, answer: `${(a + b).toFixed(1)}` };
+  for (let a = 1; a <= 99; a += 1) {
+    for (let b = 1; b <= 99; b += 1) {
+      if (a + b > 100) continue;
+      candidates.push({
+        prompt: `${formatDecimalTenths(a)} + ${formatDecimalTenths(b)} =`,
+        answer: formatDecimalTenths(a + b),
+      });
+    }
+  }
+  return candidates;
+}
+
+function formatWeight(grams) {
+  if (grams >= 1000) {
+    const kg = Math.floor(grams / 1000);
+    const rest = grams % 1000;
+    return rest ? `${kg}kg ${rest}g` : `${kg}kg`;
+  }
+  return `${grams}g`;
 }
 
 function makeWeightProblem(settings) {
-  const grams = rand(1, 30) * 100;
-  if (settings.type === "read") {
-    return {
-      prompt: "はかりの重さを読みましょう。",
-      answer: grams >= 1000 ? `${Math.floor(grams / 1000)}kg${grams % 1000 ? ` ${grams % 1000}g` : ""}` : `${grams}g`,
-      visual: scaleSvg(grams),
-    };
-  }
+  return pick(makeWeightCandidates(settings));
+}
+
+function makeWeightCandidates(settings) {
+  const candidates = [];
   if (settings.type === "compare") {
-    const a = rand(1, 30) * 100;
-    const b = rand(1, 30) * 100;
-    const sign = a === b ? "=" : a > b ? ">" : "<";
-    return { prompt: `${a}g □ ${b}g`, answer: sign };
+    for (let i = 0; i < 160; i += 1) {
+      const a = rand(2, 50) * 100;
+      const b = rand(2, 50) * 100;
+      candidates.push({
+        prompt: `${formatWeight(a)} □ ${formatWeight(b)}`,
+        answer: a === b ? "=" : a > b ? ">" : "<",
+      });
+    }
+    return candidates;
   }
-  const kg = rand(1, 5);
-  const g = rand(1, 9) * 100;
-  return { prompt: `${kg}kg ${g}g =`, answer: `${kg * 1000 + g}g` };
+  if (settings.type === "addSub") {
+    for (let i = 0; i < 180; i += 1) {
+      const a = rand(5, 35) * 100;
+      const b = rand(1, 20) * 100;
+      const op = pick(["+", "-"]);
+      const left = op === "-" ? Math.max(a, b) : a;
+      const right = op === "-" ? Math.min(a, b) : b;
+      candidates.push({
+        prompt: `${formatWeight(left)} ${op} ${formatWeight(right)} =`,
+        answer: formatWeight(op === "+" ? left + right : left - right),
+      });
+    }
+    return candidates;
+  }
+  for (let kg = 1; kg <= 5; kg += 1) {
+    for (let g = 0; g <= 900; g += 100) {
+      const total = kg * 1000 + g;
+      candidates.push({
+        prompt: `${formatWeight(total)} = □g`,
+        answer: `${total}g`,
+      });
+      if (g > 0) {
+        candidates.push({
+          prompt: `${total}g = □kg □g`,
+          answer: `${kg}kg ${g}g`,
+        });
+      }
+    }
+  }
+  return candidates;
+}
+
+function makeProblemPool(settings) {
+  if (config.kind === "division") return makeDivisionCandidates(settings);
+  if (config.kind === "bigNumber") return makeBigNumberCandidates(settings);
+  if (config.kind === "decimal") return makeDecimalCandidates(settings);
+  if (config.kind === "weight") return makeWeightCandidates(settings);
+  return [];
+}
+
+function problemKey(problem) {
+  return `${problem.prompt}|${problem.answer}`;
+}
+
+function isCompatibleProblem(problem) {
+  if (!problem || typeof problem.prompt !== "string" || typeof problem.answer !== "string") return false;
+  if (config.kind === "clock") return typeof problem.clockTotal === "number";
+  return true;
 }
 
 function makeProblem(settings) {
@@ -297,9 +384,35 @@ function generateProblems(options = {}) {
     els.problemCount.value = String(getProblemCount());
   }
   const settings = getSettings();
-  problems = Array.from({ length: settings.count }, () => makeProblem(settings));
+  const pool = shuffle(makeProblemPool(settings));
+  if (pool.length) {
+    const selected = [];
+    const seen = new Set();
+    pool.forEach((problem) => {
+      if (selected.length >= settings.count) return;
+      const key = problemKey(problem);
+      if (seen.has(key)) return;
+      selected.push(problem);
+      seen.add(key);
+    });
+    problems = selected;
+  } else {
+    const selected = [];
+    const seen = new Set();
+    let attempts = 0;
+    while (selected.length < settings.count && attempts < settings.count * 10) {
+      const problem = makeProblem(settings);
+      const key = problemKey(problem);
+      if (!seen.has(key)) {
+        selected.push(problem);
+        seen.add(key);
+      }
+      attempts += 1;
+    }
+    problems = selected;
+  }
   render();
-  setStatus("もんだいをつくりなおしました。");
+  setStatus("問題を作り直しました。");
 }
 
 function renderProblem(problem, showAnswer, settings) {
@@ -324,9 +437,20 @@ function renderProblem(problem, showAnswer, settings) {
 
   const answerLine = document.createElement("div");
   answerLine.className = "answer-line";
-  answerLine.innerHTML = showAnswer
-    ? `<span class="answer-value">${problem.answer}</span>`
-    : `<span class="blank">□</span><span class="small-note">こたえ</span>`;
+  if (showAnswer) {
+    const answerValue = document.createElement("span");
+    answerValue.className = "answer-value";
+    answerValue.textContent = problem.answer;
+    answerLine.append(answerValue);
+  } else {
+    const blank = document.createElement("span");
+    blank.className = "blank";
+    blank.textContent = "□";
+    const note = document.createElement("span");
+    note.className = "small-note";
+    note.textContent = "こたえ";
+    answerLine.append(blank, note);
+  }
   card.append(answerLine);
   return card;
 }
@@ -365,7 +489,7 @@ function applyGridDensity(list, settings) {
 }
 
 function problemHasVisual() {
-  return config.kind === "clock" || config.kind === "time" || config.kind === "weight";
+  return config.kind === "clock" || config.kind === "time";
 }
 
 function renderPage(kind, showAnswer) {
@@ -410,15 +534,10 @@ function render() {
   els.pages.replaceChildren(...pages);
   els.pageCount.textContent = `${pages.length}枚`;
   saveState();
-  return;
-  normalizeProblems();
-  els.pages.replaceChildren(renderPage("もんだい", false), renderPage("こたえ", true));
-  els.pageCount.textContent = "2枚";
-  saveState();
 }
 
 function getShareState() {
-  return { settings: getSettings(), problems };
+  return { version: 2, settings: getSettings(), problems };
 }
 
 function encodeState(state) {
@@ -451,12 +570,9 @@ function loadInitialState() {
   const hash = window.location.hash.replace(/^#data=/, "");
   if (hash) {
     const decoded = decodeState(hash);
-    if (decoded?.settings && Array.isArray(decoded.problems)) {
+    if (decoded?.version === 2 && decoded.settings && Array.isArray(decoded.problems)) {
       applySettings(decoded.settings);
-      problems = decoded.problems;
-      if (config.kind === "clock" && problems.some((problem) => typeof problem.clockTotal !== "number")) {
-        problems = [];
-      }
+      problems = decoded.problems.filter(isCompatibleProblem);
       return;
     }
   }
@@ -465,12 +581,10 @@ function loadInitialState() {
     const saved = localStorage.getItem(stateStorageKey);
     if (saved) {
       const parsed = JSON.parse(saved);
+      if (parsed?.version !== 2) return;
       applySettings(parsed.settings);
       if (Array.isArray(parsed.problems)) {
-        problems = parsed.problems;
-        if (config.kind === "clock" && problems.some((problem) => typeof problem.clockTotal !== "number")) {
-          problems = [];
-        }
+        problems = parsed.problems.filter(isCompatibleProblem);
       }
     }
   } catch {}
@@ -539,25 +653,6 @@ function setupPrintControls() {
     ]));
   }
   els.minuteNumberMode = document.querySelector("#minuteNumberMode");
-  els.includeAnswers = document.querySelector("#includeAnswers");
-  els.includeAnswers.disabled = false;
-  return;
-  if (!document.querySelector("#problemScale")) {
-    grid.append(makeSelectControl("problemScale", "問題の大きさ", [
-      { value: "compact", label: "小さめ" },
-      { value: "normal", label: "ふつう", selected: true },
-      { value: "large", label: "大きめ" },
-    ]));
-  }
-  if (!document.querySelector("#problemSpacing")) {
-    grid.append(makeSelectControl("problemSpacing", "問題の間隔", [
-      { value: "tight", label: "せまい" },
-      { value: "normal", label: "ふつう", selected: true },
-      { value: "wide", label: "広い" },
-    ]));
-  }
-  els.problemScale = document.querySelector("#problemScale");
-  els.problemSpacing = document.querySelector("#problemSpacing");
   els.includeAnswers = document.querySelector("#includeAnswers");
   els.includeAnswers.disabled = false;
 }
