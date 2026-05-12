@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>2年生 長さ</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="../print-layout-addon.css">
 </head>
 <body>
   <div class="app-shell">
@@ -13,7 +14,7 @@
       <div class="row-fields"><label class="field"><span>名前</span><input id="studentName" type="text" autocomplete="off"></label><label class="field"><span>日付</span><input id="worksheetDate" type="text" autocomplete="off" placeholder="5 / 3"></label></div>
       <label class="field"><span>プリント名</span><input id="worksheetTitle" type="text" autocomplete="off" value="2年生 長さ"></label>
       <div class="settings-grid"><label class="field"><span>問題タイプ</span><select id="problemType"><option value="reading" selected>ものさしを読む</option><option value="conversion">単位をかえる</option><option value="compare">長さ比べ</option><option value="arithmetic">長さのたし算・ひき算</option></select></label><label class="field"><span>難易度</span><select id="difficulty"><option value="easy">やさしい</option><option value="normal" selected>ふつう</option><option value="hard">むずかしい</option></select></label><label class="field"><span>問題数</span><span class="combo-input"><input id="problemCount" type="number" min="1" max="36" step="1" value="12" inputmode="numeric"><select id="problemCountPreset" aria-label="問題数の候補"><option value="">候補</option><option value="8">8問</option><option value="12">12問</option><option value="16">16問</option><option value="24">24問</option><option value="36">36問</option></select></span></label><label class="field"><span>列数</span><select id="columns"><option value="1">1列</option><option value="2" selected>2列</option><option value="3">3列</option></select></label></div>
-      <div class="check-row"><label><input id="showHint" type="checkbox"> ヒントを表示する</label><label><input id="includeAnswers" type="checkbox" checked disabled> 答えページをつける</label></div>
+      <div class="check-row"><label><input id="showHint" type="checkbox"> ヒントを表示する</label><label><input id="includeAnswers" type="checkbox" checked> 答えページをつける</label></div>
       <div class="actions"><button id="printBtn" type="button">印刷 / PDF保存</button><button id="regenerateBtn" type="button">作り直す</button><button id="copyLinkBtn" type="button">共有URLをコピー</button></div>
       <p id="status" class="status" role="status" aria-live="polite"></p>
     </aside>
@@ -21,6 +22,10 @@
   </div>
   <template id="pageTemplate"><section class="print-page"><header class="sheet-header"><div class="name-line">なまえ <span class="value" data-name></span></div><div class="title" data-title></div><div class="date-line">日づけ <span class="value" data-date></span></div><div class="sheet-kind" data-kind></div></header><ol class="problem-grid" data-problems></ol></section></template>
   <script src="app.js"></script>
+<<<<<<< HEAD
   <script src="../shared/print-adjustments.js"></script>
+=======
+  <script src="../print-layout-addon.js"></script>
+>>>>>>> codex/三年生本体
 </body>
 </html>
