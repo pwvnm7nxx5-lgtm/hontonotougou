@@ -15,7 +15,7 @@ const els = {
   worksheetTitle: document.querySelector("#worksheetTitle"),
   problemType: document.querySelector("#problemType"),
   range: document.querySelector("#range"),
-  minuteLabels: document.querySelector("#minuteLabels"),
+  minuteLabelMode: document.querySelector("#minuteLabelMode"),
   problemCount: document.querySelector("#problemCount"),
   problemCountPreset: document.querySelector("#problemCountPreset"),
   columns: document.querySelector("#columns"),
@@ -62,7 +62,7 @@ function getSettings() {
     title: els.worksheetTitle.value || APP.title,
     type: clampChoice(els.problemType.value, ["read", "draw", "mix"], "read"),
     range: clampChoice(els.range.value, ["hour", "half"], "hour"),
-    minuteLabels: els.minuteLabels.checked,
+    minuteLabelMode: clampChoice(els.minuteLabelMode.value, ["none", "five", "ten", "thirty"], "none"),
     count: getProblemCount(),
     columns: Number.parseInt(clampChoice(els.columns.value, ["1", "2"], String(APP.defaultCols)), 10),
   };
@@ -75,7 +75,11 @@ function applySettings(settings) {
   els.worksheetTitle.value = settings.title || APP.title;
   els.problemType.value = clampChoice(settings.type, ["read", "draw", "mix"], "read");
   els.range.value = clampChoice(settings.range, ["hour", "half"], "hour");
-  els.minuteLabels.checked = settings.minuteLabels === true;
+  els.minuteLabelMode.value = clampChoice(
+    settings.minuteLabelMode ?? (settings.minuteLabels === true ? "thirty" : "none"),
+    ["none", "five", "ten", "thirty"],
+    "none"
+  );
   els.problemCount.value = String(clampNumber(settings.count, problemCountMin, problemCountMax, APP.defaultCount));
   els.problemCountPreset.value = "";
   els.columns.value = clampChoice(settings.columns, ["1", "2"], String(APP.defaultCols));
@@ -93,12 +97,30 @@ function timeText(hour, minute) {
   return minute === 30 ? `${hour}じはん` : `${hour}じ`;
 }
 
+function minuteLabelEntries(mode) {
+  if (mode === "five") {
+    return [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 0].map((minute) => ({
+      minute,
+      label: minute === 0 ? "0" : String(minute),
+    }));
+  }
+  if (mode === "ten") {
+    return [10, 20, 30, 40, 50, 0].map((minute) => ({
+      minute,
+      label: minute === 0 ? "0" : String(minute),
+    }));
+  }
+  if (mode === "thirty") {
+    return [
+      { minute: 0, label: "0" },
+      { minute: 30, label: "30" },
+    ];
+  }
+  return [];
+}
+
 function minuteLabelMarks(mode) {
-  if (mode !== "half") return "";
-  return [
-    { minute: 0, label: "0" },
-    { minute: 30, label: "30" },
-  ].map(({ minute: labelMinute, label }) => {
+  return minuteLabelEntries(mode).map(({ minute: labelMinute, label }) => {
     const angle = (labelMinute * 6 - 90) * Math.PI / 180;
     const x = 64 + Math.cos(angle) * 70;
     const y = 67 + Math.sin(angle) * 70;
@@ -139,7 +161,7 @@ function makeProblem(settings) {
   const hour = rand(1, 12);
   const minute = settings.range === "half" ? pick([0, 30]) : 0;
   const type = settings.type === "mix" ? pick(["read", "draw"]) : settings.type;
-  const minuteLabelMode = settings.minuteLabels ? "half" : "none";
+  const minuteLabelMode = settings.minuteLabelMode;
   if (type === "draw") {
     return {
       prompt: `${timeText(hour, minute)} の ながいはりをかきましょう。`,
@@ -277,7 +299,7 @@ async function copyShareUrl() {
 
 function bindEvents() {
   [els.studentName, els.worksheetDate, els.worksheetTitle].forEach((control) => control.addEventListener("input", render));
-  [els.problemType, els.range, els.minuteLabels, els.problemCount, els.columns].forEach((control) => control.addEventListener("change", generateProblems));
+  [els.problemType, els.range, els.minuteLabelMode, els.problemCount, els.columns].forEach((control) => control.addEventListener("change", generateProblems));
   els.problemCount.addEventListener("input", () => {
     if (els.problemCount.value === "") return;
     els.problemCountPreset.value = "";
