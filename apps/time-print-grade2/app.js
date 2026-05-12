@@ -17,7 +17,7 @@ const els = {
   worksheetTitle: document.querySelector("#worksheetTitle"),
   problemType: document.querySelector("#problemType"),
   difficulty: document.querySelector("#difficulty"),
-  minuteNumbers: document.querySelector("#minuteNumbers"),
+  minuteNumberMode: document.querySelector("#minuteNumberMode"),
   problemCount: document.querySelector("#problemCount"),
   problemCountPreset: document.querySelector("#problemCountPreset"),
   printBtn: document.querySelector("#printBtn"),
@@ -47,7 +47,7 @@ function getSettings() {
     title: els.worksheetTitle.value || APP.title,
     type: clampChoice(els.problemType.value, typeValues(), APP.defaultType),
     difficulty: clampChoice(els.difficulty.value, difficultyValues(), APP.defaultDifficulty),
-    minuteNumbers: els.minuteNumbers.checked,
+    minuteNumberMode: clampChoice(els.minuteNumberMode.value, ["none", "five", "ten", "thirty"], "none"),
     count: getProblemCount(),
     columns: APP.defaultCols,
   };
@@ -59,7 +59,11 @@ function applySettings(settings) {
   els.worksheetTitle.value = settings.title || APP.title;
   els.problemType.value = clampChoice(settings.type, typeValues(), APP.defaultType);
   els.difficulty.value = clampChoice(settings.difficulty, difficultyValues(), APP.defaultDifficulty);
-  els.minuteNumbers.checked = settings.minuteNumbers === true;
+  els.minuteNumberMode.value = clampChoice(
+    settings.minuteNumberMode ?? (settings.minuteNumbers === true ? "five" : "none"),
+    ["none", "five", "ten", "thirty"],
+    "none"
+  );
   els.problemCount.value = String(clampNumber(settings.count, problemCountMin, problemCountMax, APP.defaultCount));
   els.problemCountPreset.value = "";
 }
@@ -77,19 +81,38 @@ function timeText(totalMinutes) {
   const minute = minutes % 60;
   return minute === 0 ? `${hour}じ` : `${hour}じ${minute}ふん`;
 }
-function minuteNumberMarks(enabled) {
-  if (!enabled) return "";
-  return Array.from({ length: 12 }, (_, i) => {
-    const hourNumber = i + 1;
-    const label = hourNumber === 12 ? "0" : String(hourNumber * 5);
-    const angle = (hourNumber * 30 - 90) * Math.PI / 180;
+function minuteNumberEntries(mode) {
+  if (mode === "five") {
+    return [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 0].map((minute) => ({
+      minute,
+      label: minute === 0 ? "0" : String(minute),
+    }));
+  }
+  if (mode === "ten") {
+    return [10, 20, 30, 40, 50, 0].map((minute) => ({
+      minute,
+      label: minute === 0 ? "0" : String(minute),
+    }));
+  }
+  if (mode === "thirty") {
+    return [
+      { minute: 0, label: "0" },
+      { minute: 30, label: "30" },
+    ];
+  }
+  return [];
+}
+
+function minuteNumberMarks(mode) {
+  return minuteNumberEntries(mode).map(({ minute, label }) => {
+    const angle = (minute * 6 - 90) * Math.PI / 180;
     const x = 64 + Math.cos(angle) * 70;
     const y = 67 + Math.sin(angle) * 70;
     return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="7.5" font-weight="700" text-anchor="middle" fill="#1d4ed8" stroke="#fff" stroke-width="3" paint-order="stroke">${label}</text>`;
   }).join("");
 }
 
-function clockSvg(totalMinutes, handMode = "both", showMinuteNumbers = false) {
+function clockSvg(totalMinutes, handMode = "both", minuteNumberMode = "none") {
   const minutes = ((totalMinutes % 720) + 720) % 720;
   const minute = minutes % 60;
   const hour = Math.floor(minutes / 60) || 12;
@@ -118,7 +141,7 @@ function clockSvg(totalMinutes, handMode = "both", showMinuteNumbers = false) {
     parts.push(`<line x1="64" y1="64" x2="${(64 + Math.cos(minuteAngle) * 43).toFixed(1)}" y2="${(64 + Math.sin(minuteAngle) * 43).toFixed(1)}" stroke="#111827" stroke-width="3" stroke-linecap="round"/>`);
   }
   parts.push(`<circle cx="64" cy="64" r="3" fill="#111827"/>`);
-  return `<svg class="clock" viewBox="-14 -14 156 156" width="132" height="132" role="img" aria-label="時計"><circle cx="64" cy="64" r="59" fill="#fff" stroke="#344054" stroke-width="3"/>${marks}${nums}${minuteNumberMarks(showMinuteNumbers)}${parts.join("")}</svg>`;
+  return `<svg class="clock" viewBox="-14 -14 156 156" width="132" height="132" role="img" aria-label="時計"><circle cx="64" cy="64" r="59" fill="#fff" stroke="#344054" stroke-width="3"/>${marks}${nums}${minuteNumberMarks(minuteNumberMode)}${parts.join("")}</svg>`;
 }
 function rulerSvg(mm, showMark = true) {
   const width = 170;
@@ -167,14 +190,14 @@ function makeProblem(settings) {
 function makeTimeProblem(settings) {
   const step = settings.difficulty === "easy" ? 30 : settings.difficulty === "hard" ? 1 : 5;
   const base = rand(1, 11) * 60 + rand(0, Math.floor(59 / step)) * step;
-  if (settings.type === "draw") return { prompt: `${timeText(base)} のながいはりをかきましょう。`, answer: timeText(base), visual: clockSvg(base, "hour", settings.minuteNumbers), answerVisual: clockSvg(base, "both", settings.minuteNumbers) };
+  if (settings.type === "draw") return { prompt: `${timeText(base)} のながいはりをかきましょう。`, answer: timeText(base), visual: clockSvg(base, "hour", settings.minuteNumberMode), answerVisual: clockSvg(base, "both", settings.minuteNumberMode) };
   if (settings.type === "beforeAfter") {
     const delta = pick(settings.difficulty === "easy" ? [30, 60] : settings.difficulty === "hard" ? [10, 15, 25, 35, 45, 50] : [5, 10, 15, 30]);
     const dir = pick(["あと", "まえ"]);
     const ans = dir === "あと" ? base + delta : base - delta;
-    return { prompt: `${timeText(base)} の ${delta}ふん${dir} はいつですか。`, answer: timeText(ans), visual: clockSvg(base, true, settings.minuteNumbers) };
+    return { prompt: `${timeText(base)} の ${delta}ふん${dir} はいつですか。`, answer: timeText(ans), visual: clockSvg(base, true, settings.minuteNumberMode) };
   }
-  return { prompt: "とけいのじこくをかきましょう。", answer: timeText(base), visual: clockSvg(base, true, settings.minuteNumbers) };
+  return { prompt: "とけいのじこくをかきましょう。", answer: timeText(base), visual: clockSvg(base, true, settings.minuteNumberMode) };
 }
 function makeLengthProblem(settings) {
   const mm = settings.difficulty === "easy" ? rand(2, 10) * 10 : rand(15, 98);
@@ -318,7 +341,7 @@ async function copyShareUrl() {
 }
 function bindEvents() {
   [els.studentName, els.worksheetDate, els.worksheetTitle].forEach((control) => control.addEventListener("input", render));
-  [els.problemType, els.difficulty, els.minuteNumbers, els.problemCount].forEach((control) => control.addEventListener("change", generateProblems));
+  [els.problemType, els.difficulty, els.minuteNumberMode, els.problemCount].forEach((control) => control.addEventListener("change", generateProblems));
   els.problemCount.addEventListener("input", () => { if (els.problemCount.value === "") return; els.problemCountPreset.value = ""; generateProblems(); });
   els.problemCountPreset.addEventListener("change", () => { if (!els.problemCountPreset.value) return; els.problemCount.value = els.problemCountPreset.value; generateProblems(); els.problemCountPreset.value = ""; });
   els.printBtn.addEventListener("click", () => { render(); window.print(); });
