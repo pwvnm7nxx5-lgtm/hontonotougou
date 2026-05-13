@@ -210,6 +210,28 @@
     return control;
   }
 
+  function syncSettingsFromControls() {
+    const scaleControl = document.querySelector("#problemScale");
+    if (scaleControl) {
+      settings.scalePct = readScaleValue(scaleControl);
+      const number = document.querySelector("#problemScaleNumber");
+      if (number) number.value = String(settings.scalePct);
+    }
+
+    const sheetCountControl = document.querySelector("#printSheetCount");
+    if (sheetCountControl) {
+      settings.sheetCount = clampNumber(sheetCountControl.value, 1, 30, defaults.sheetCount);
+      sheetCountControl.value = String(settings.sheetCount);
+    }
+
+    const includeAnswers = document.querySelector("#includeAnswers");
+    if (includeAnswers) {
+      settings.includeAnswers = includeAnswers.checked;
+    }
+
+    saveSettings();
+  }
+
   function readScaleValue(control) {
     if (!control) return settings.scalePct;
     if (legacyScale[control.value]) return legacyScale[control.value];
@@ -291,11 +313,27 @@
   function applySettings() {
     if (applying) return;
     applying = true;
+    syncSettingsFromControls();
     syncCopies();
     applyScale();
     applyAnswers();
     updatePageCount();
     applying = false;
+  }
+
+  function applyBeforePrint() {
+    applySettings();
+    return new Promise((resolve) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const fontsReady = document.fonts?.ready || Promise.resolve();
+          Promise.race([
+            fontsReady,
+            new Promise((timeoutResolve) => setTimeout(timeoutResolve, 250)),
+          ]).finally(resolve);
+        });
+      });
+    });
   }
 
   function bindRangeNumber(range, key) {
@@ -336,12 +374,14 @@
       }
     }
 
-    sheetCountControl?.addEventListener("change", () => {
+    const updateSheetCount = () => {
       settings.sheetCount = clampNumber(sheetCountControl.value, 1, 30, defaults.sheetCount);
       sheetCountControl.value = String(settings.sheetCount);
       saveSettings();
       applySettings();
-    });
+    };
+    sheetCountControl?.addEventListener("input", updateSheetCount);
+    sheetCountControl?.addEventListener("change", updateSheetCount);
 
     const includeAnswers = document.querySelector("#includeAnswers");
     if (includeAnswers) {
@@ -355,6 +395,28 @@
     }
 
     applySettings();
+    window.__preparePrintAdjustments = applyBeforePrint;
+
+    if (!window.__printAdjustmentsPatched) {
+      window.__printAdjustmentsPatched = true;
+      const nativePrint = window.print.bind(window);
+      let printing = false;
+      window.print = () => {
+        if (printing) {
+          nativePrint();
+          return;
+        }
+        printing = true;
+        applyBeforePrint().finally(() => {
+          nativePrint();
+          printing = false;
+        });
+      };
+      window.addEventListener("beforeprint", () => {
+        applySettings();
+      });
+    }
+
     const pages = document.querySelector("#pages");
     if (pages) {
       new MutationObserver(() => applySettings()).observe(pages, { childList: true, subtree: false });
