@@ -749,6 +749,20 @@ async function copyShareUrl() {
   }
 }
 
+function waitForPrintReady() {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const fontsReady = document.fonts?.ready || Promise.resolve();
+        Promise.race([
+          fontsReady,
+          new Promise((timeoutResolve) => setTimeout(timeoutResolve, 250)),
+        ]).finally(resolve);
+      });
+    });
+  });
+}
+
 function bindEvents() {
   const controls = [
     els.sourceText,
@@ -781,8 +795,9 @@ function bindEvents() {
     control.addEventListener("change", render);
   });
 
-  els.printBtn.addEventListener("click", () => {
+  els.printBtn.addEventListener("click", async () => {
     render();
+    await waitForPrintReady();
     window.print();
   });
 
